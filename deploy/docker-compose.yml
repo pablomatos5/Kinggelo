@@ -1,0 +1,17 @@
+# Uso na VPS (separado do Nexos): só entra na rede do nginx compartilhado para ser encaminhado.
+services:
+  app:
+    build: ..
+    container_name: kinggelo-app
+    restart: unless-stopped
+    environment:
+      KG_HTTPS: "1"
+    volumes:
+      - dados:/dados
+    networks: [nginx]
+volumes:
+  dados:
+networks:
+  nginx:
+    external: true
+    name: nexos_default

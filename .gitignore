@@ -1,0 +1,12 @@
+# banco do painel (clientes, pedidos, senhas): nunca vai para o git
+painel/dados/
+*.db
+*.db-shm
+*.db-wal
+node_modules/
+.env
+.env.*
+# páginas temporárias de teste de animação
+_t.html
+_a.html
+_c.html

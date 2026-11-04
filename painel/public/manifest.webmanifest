@@ -1,0 +1,18 @@
+{
+  "id": "/admin/",
+  "name": "King Gelo · Painel",
+  "short_name": "King Gelo",
+  "description": "Painel do dono da King Gelo: pedidos, clientes, estoque e avisos de reposição.",
+  "lang": "pt-BR",
+  "start_url": "/admin/",
+  "scope": "/admin/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1aa3ef",
+  "theme_color": "#1aa3ef",
+  "icons": [
+    { "src": "/admin/icones/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/admin/icones/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/admin/icones/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

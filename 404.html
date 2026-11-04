@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Página não encontrada · King Gelo</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#1aa3ef">
+  <link rel="icon" href="/img/favicon-32.png" sizes="32x32">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --azul: #1aa3ef; --marinho: #0b2a5e; --ouro: #f5c518; --noite: #0b0d12; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 32px 20px;
+      font-family: Outfit, system-ui, sans-serif; color: #fff; text-align: center;
+      background: radial-gradient(60% 60% at 50% 35%, rgba(255, 255, 255, .22), transparent 70%), var(--azul);
+    }
+    main { max-width: 560px; }
+    img { width: min(320px, 70vw); height: auto; filter: drop-shadow(0 5px 5px rgba(11, 42, 94, .35)); }
+    .num { margin: 8px 0 0; font-family: Anton, Impact, sans-serif; font-size: clamp(5rem, 22vw, 9rem); line-height: .9; color: var(--ouro); text-shadow: 0 6px 0 var(--marinho); }
+    h1 { margin: 6px 0 10px; font-family: Anton, Impact, sans-serif; font-weight: 400; text-transform: uppercase; font-size: clamp(1.8rem, 6vw, 2.8rem); line-height: 1; text-shadow: 0 4px 0 var(--marinho); }
+    p { margin: 0 auto 26px; max-width: 38ch; font-size: 1.1rem; font-weight: 500; }
+    .acoes { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    a.btn { display: inline-flex; align-items: center; padding: .85em 1.5em; border-radius: 999px; font-weight: 800; text-decoration: none; }
+    .ouro { background: var(--ouro); color: var(--noite); box-shadow: 0 5px 0 #c99a00; }
+    .vazado { border: 2px solid #fff; color: #fff; }
+    a.btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/img/cliente/logo-gelo.webp" alt="King Gelo" width="1400" height="516">
+    <p class="num" aria-hidden="true">404</p>
+    <h1>Esse gelo derreteu</h1>
+    <p>A página que você procurou não existe ou mudou de lugar. Mas o King Gelo continua geladinho.</p>
+    <div class="acoes">
+      <a class="btn ouro" href="/">Voltar para o site</a>
+      <a class="btn vazado" href="https://wa.me/5591993561705" target="_blank" rel="noopener">Falar no WhatsApp</a>
+    </div>
+  </main>
+</body>
+</html>

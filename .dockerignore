@@ -1,0 +1,4 @@
+painel/dados
+**/*.db*
+deploy
+.git

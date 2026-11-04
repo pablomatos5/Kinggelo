@@ -1,0 +1,869 @@
+:root {
+  --azul: #1aa3ef;
+  --azul-escuro: #0b78c2;
+  --marinho: #0b2a5e;
+  --noite: #0b0d12;
+  --ouro: #f5c518;
+  --ouro-escuro: #c99a00;
+  --vermelho: #e3262f;
+  --verde: #3fae2a;
+  --laranja: #ff7a00;
+  --creme: #fff6e3;
+  /* sabor do gelo que cai: melancia, o saquinho do centro */
+  --gelo-borda: #ffd0d5;
+  --gelo-claro: #ff7f8c;
+  --gelo-meio: #e8223e;
+  --gelo-sombra: #7d0018;
+  --drink-claro: #ff8996;
+  --drink: #f0324b;
+  --drink-escuro: #b30f2b;
+  --raio: 26px;
+  --topo-h: 72px;
+  --max: 1600px;
+  --margem: max(24px, calc((100% - var(--max)) / 2), 4vw);
+  --display: "Anton", Impact, "Arial Narrow", sans-serif;
+  --corpo: "Outfit", system-ui, sans-serif;
+  --titulo-xl: clamp(3.2rem, 7.4vw, 8.5rem);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: var(--topo-h); }
+body {
+  margin: 0;
+  font-family: var(--corpo);
+  color: var(--noite);
+  background: var(--azul);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+img, video { display: block; max-width: 100%; }
+a { color: inherit; }
+h1, h2, h3 { margin: 0; font-weight: 400; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.ic { width: 1.15em; height: 1.15em; flex: none; }
+
+/* ---------- logo (vetor do adesivo oficial) ---------- */
+.logo { display: inline-flex; text-decoration: none; }
+.logo-svg {
+  /* logo branca (coroa + King Gelo empilhado), a mesma do rodapé */
+  height: 62px; width: auto; aspect-ratio: 1000 / 1219;
+  overflow: visible;
+  filter: drop-shadow(0 2px 3px rgba(11, 42, 94, .4));
+}
+
+/* ---------- botões ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .55em;
+  padding: .95em 1.6em;
+  border-radius: 999px;
+  font-weight: 800; font-size: 1.05rem;
+  text-decoration: none;
+  border: 2px solid transparent;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn-sm { padding: .6em 1.15em; font-size: .92rem; }
+.btn-grande { font-size: 1.25rem; padding: 1.05em 2em; }
+.btn-ouro { background: var(--ouro); color: var(--noite); box-shadow: 0 6px 0 -1px var(--ouro-escuro); }
+.btn-vazado { border-color: currentColor; }
+.btn-vazado:hover { background: rgba(255, 255, 255, .14); }
+.btn-escuro { background: var(--marinho); color: #fff; }
+
+/* ---------- topo ---------- */
+.trilho-progresso { position: fixed; inset: 0 0 auto; height: 4px; z-index: 50; pointer-events: none; }
+.trilho-progresso span {
+  display: block; height: 100%; transform-origin: left; transform: scaleX(0);
+  background: linear-gradient(90deg, var(--vermelho), var(--ouro), var(--verde));
+}
+.topo {
+  position: sticky; top: 0; z-index: 40;
+  height: var(--topo-h);
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0 var(--margem);
+  background: var(--azul);
+  border-bottom: 2px solid rgba(255, 255, 255, .25);
+}
+.menu { display: flex; gap: 1.8rem; }
+.menu a { color: #fff; text-decoration: none; font-weight: 700; }
+.menu a:hover { color: var(--marinho); }
+
+/* ---------- padrão do site: informação à esquerda, produto à direita ---------- */
+.duo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr);
+  gap: 2rem clamp(2rem, 5vw, 5rem);
+  align-items: center;
+}
+/* nas seções o conteúdo ganha mais largura: a faixa da direita só precisa caber o gelo caindo
+   (o hero e o contato, que têm o produto à direita, continuam com a divisão original) */
+@media (min-width: 821px) {
+  .secao:not(.contato) .duo { grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); }
+}
+.duo-trilho { align-self: stretch; position: relative; min-height: 200px; }
+
+/* ---------- acessibilidade ---------- */
+.pular { position: fixed; left: 12px; top: -60px; z-index: 60; padding: .7em 1.1em; border-radius: 12px; background: var(--ouro); color: var(--noite); font-weight: 800; text-decoration: none; transition: top .2s; }
+.pular:focus { top: 12px; }
+:focus-visible { outline: 3px solid var(--ouro); outline-offset: 3px; border-radius: 6px; }
+
+/* ---------- menu no celular (e em telas médias, onde os links quebravam em duas linhas) ---------- */
+.menu-botao { display: none; }
+@media (max-width: 1100px) {
+  .menu-botao {
+    display: grid; gap: 5px; place-content: center; width: 46px; height: 46px; border: 0; border-radius: 14px;
+    background: rgba(255, 255, 255, .16); cursor: pointer; z-index: 45; order: 3;
+  }
+  .menu-botao i { display: block; width: 22px; height: 3px; border-radius: 3px; background: #fff; transition: transform .3s, opacity .3s; }
+  .menu-botao[aria-expanded="true"] i:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+  .menu-botao[aria-expanded="true"] i:nth-child(2) { opacity: 0; }
+  .menu-botao[aria-expanded="true"] i:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+  .menu {
+    display: flex !important; position: fixed; inset: var(--topo-h) 0 0 0; z-index: 44;
+    flex-direction: column; justify-content: center; align-items: flex-start; gap: .4rem; padding: 2rem 28px;
+    background: var(--marinho);
+    clip-path: circle(0 at calc(100% - 40px) 0); transition: clip-path .5s cubic-bezier(.2, .8, .2, 1);
+    visibility: hidden;
+  }
+  .menu.aberto { clip-path: circle(150% at calc(100% - 40px) 0); visibility: visible; }
+  .menu a { font-family: var(--display); font-size: clamp(1.6rem, min(11vw, 9svh), 3.4rem); text-transform: uppercase; line-height: 1.1; opacity: 1; }
+}
+.menu-cta { display: none !important; }
+@media (max-width: 820px) {
+  .topo .btn-sm { display: none; }
+  /* no celular o botão de revenda do topo some; ele aparece dentro do menu aberto */
+  .menu a.menu-cta { display: inline-flex !important; margin-top: 1.4rem; color: var(--noite); font-family: var(--corpo, inherit); font-size: 1.05rem; text-transform: none; line-height: 1.2; }
+}
+
+/* ---------- hero ---------- */
+/* a sequência do saquinho roda por tempo: o hero tem a altura da tela e nada fica preso ao rolar */
+.hero { height: calc(100svh - var(--topo-h)); background: var(--azul); color: #fff; }
+/* profundidade no azul: luz vindo de cima à direita, onde estão os saquinhos, e fundo mais denso embaixo */
+.hero-palco {
+  background:
+    radial-gradient(60% 70% at 72% 42%, rgba(255, 255, 255, .22), transparent 70%),
+    radial-gradient(50% 60% at 8% 100%, rgba(11, 42, 94, .32), transparent 70%),
+    linear-gradient(180deg, transparent 55%, rgba(11, 42, 94, .22));
+}
+.hero-palco {
+  position: sticky; top: var(--topo-h);
+  height: calc(100svh - var(--topo-h));
+  padding: clamp(1rem, 3vh, 2.5rem) var(--margem);
+  overflow: hidden;
+  z-index: 2;
+}
+.hero-topo { position: relative; z-index: 3; }
+.hero-titulo { margin: 0 0 1.4rem; line-height: 0; }
+.hero-logo {
+  width: 100%; max-width: min(600px, 34vw); height: auto; aspect-ratio: 590 / 222;
+  overflow: visible;
+  /* sombra com desfoque: a sombra dura duplicava o texto fino do slogan como um fantasma */
+  filter: drop-shadow(0 5px 5px rgba(11, 42, 94, .35)) drop-shadow(0 22px 28px rgba(5, 40, 90, .28));
+}
+.selo {
+  display: inline-flex; align-items: center; gap: .5em;
+  margin: 0 0 .9rem;
+  padding: .45em 1em;
+  border-radius: 999px;
+  background: var(--marinho); color: #fff;
+  font-weight: 800; font-size: .82rem; letter-spacing: .08em; text-transform: uppercase;
+}
+.selo .ic { color: var(--ouro); }
+.lead { font-size: clamp(1.05rem, 1.4vw, 1.3rem); max-width: 40ch; margin: 0 0 1.4rem; font-weight: 500; }
+.hero-acoes { display: flex; flex-wrap: wrap; gap: .8rem; }
+.hero .btn-vazado { color: #fff; }
+.hero-fatos {
+  display: inline-flex; gap: 0; list-style: none; margin: 1.8rem 0 0; padding: .9rem .4rem; font-weight: 600;
+  /* sem desfoque de fundo: o fundo do hero é animado e o desfoque seria refeito a cada quadro */
+  background: rgba(11, 60, 120, .28); border: 1px solid rgba(255, 255, 255, .28); border-radius: 22px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 14px 30px rgba(5, 40, 90, .18);
+}
+.hero-fatos li { padding: 0 1.4rem; font-size: .9rem; }
+.hero-fatos li + li { border-left: 1px solid rgba(255, 255, 255, .3); }
+.hero-fatos strong { display: block; font-family: var(--display); font-weight: 400; font-size: 2.2rem; line-height: 1; text-shadow: 0 3px 0 var(--marinho); }
+
+.hero-palco.duo { grid-template-rows: minmax(0, 1fr); }
+.hero-pacotes { position: relative; height: 100%; min-height: 0; align-self: stretch; }
+.brilho-palco {
+  position: absolute; left: 50%; bottom: 0; width: 120%; aspect-ratio: 1; translate: -50% 30%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .42), rgba(255, 255, 255, .12) 55%, transparent);
+  pointer-events: none;
+}
+/* raios girando devagar atrás do leque (a "coroa" de luz), bolhas subindo e a sombra no chão */
+.raios {
+  position: absolute; left: 50%; top: 52%; width: 150%; aspect-ratio: 1; translate: -50% -50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .17) 0 6deg, transparent 6deg 18deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 20%, transparent 72%);
+  mask-image: radial-gradient(closest-side, #000 20%, transparent 72%);
+  animation: girar 70s linear infinite;
+  will-change: transform;
+  pointer-events: none;
+}
+@keyframes girar { to { rotate: 1turn; } }
+.hero-bolhas { position: absolute; inset: 0; pointer-events: none; }
+.hero-bolhas i {
+  position: absolute; bottom: -20px; width: var(--t, 12px); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, .95) 0 12%, rgba(255, 255, 255, .25) 30%, rgba(255, 255, 255, .08) 65%);
+  border: 1px solid rgba(255, 255, 255, .45);
+  animation: bolha-sobe var(--d, 9s) linear infinite; animation-delay: var(--atraso, 0s);
+  opacity: 0;
+}
+.hero-bolhas i:nth-child(1) { left: 6%; --t: 10px; --d: 8s; }
+.hero-bolhas i:nth-child(2) { left: 18%; --t: 18px; --d: 11s; --atraso: -3s; }
+.hero-bolhas i:nth-child(3) { left: 27%; --t: 8px; --d: 7s; --atraso: -5s; }
+.hero-bolhas i:nth-child(4) { left: 38%; --t: 14px; --d: 10s; --atraso: -1s; }
+.hero-bolhas i:nth-child(5) { left: 52%; --t: 9px; --d: 9s; --atraso: -6s; }
+.hero-bolhas i:nth-child(6) { left: 63%; --t: 20px; --d: 13s; --atraso: -2s; }
+.hero-bolhas i:nth-child(7) { left: 72%; --t: 11px; --d: 8.5s; --atraso: -7s; }
+.hero-bolhas i:nth-child(8) { left: 82%; --t: 15px; --d: 12s; --atraso: -4s; }
+.hero-bolhas i:nth-child(9) { left: 90%; --t: 8px; --d: 7.5s; --atraso: -2.5s; }
+.hero-bolhas i:nth-child(10) { left: 96%; --t: 12px; --d: 10.5s; --atraso: -8s; }
+@keyframes bolha-sobe {
+  0% { transform: translate(0, 0); opacity: 0; }
+  12% { opacity: .9; }
+  50% { transform: translate(14px, -45vh); }
+  85% { opacity: .7; }
+  100% { transform: translate(-6px, -90vh); opacity: 0; }
+}
+.chao {
+  position: absolute; left: 50%; bottom: 1%; width: 70%; height: 7%; translate: -50% 0;
+  background: radial-gradient(closest-side, rgba(5, 40, 90, .45), transparent);
+  pointer-events: none;
+}
+.leque, .pacote-centro { position: absolute; left: 50%; will-change: transform; }
+.leque {
+  /* o leque inteiro ocupa ~2,2× a altura de um saquinho: limitado pela largura da coluna para nenhum sair da tela */
+  /* --leque-escala é ajustada pelo hero.js para o leque nunca passar da borda da tela */
+  bottom: 24%; height: calc(min(48%, 19.5vw) * var(--leque-escala, 1)); width: auto;
+  translate: -50% 0;
+  /* centro de giro mais baixo = leque mais aberto, os sabores de trás aparecem mais */
+  transform-origin: 50% 165%;
+  transform: rotate(calc(var(--a) * var(--abre, 1)));
+  filter: drop-shadow(0 18px 18px rgba(5, 40, 90, .35));
+  animation: leque-flutua 5.5s ease-in-out infinite;
+}
+.leque:nth-of-type(2) { animation-delay: -1s; }
+.leque:nth-of-type(3) { animation-delay: -2.2s; }
+.leque:nth-of-type(4) { animation-delay: -3.1s; }
+.leque:nth-of-type(5) { animation-delay: -4s; }
+.leque:nth-of-type(6) { animation-delay: -4.8s; }
+.leque:nth-of-type(7) { animation-delay: -2.7s; }
+/* escolher o sabor: os saquinhos do leque são clicáveis */
+/* o mouse é detectado pelo pixel visível (hero.js); a caixa transparente da imagem não captura nada */
+.leque { pointer-events: none; transition: scale .25s cubic-bezier(.2, .8, .2, 1), filter .25s; }
+.leque.sob-mouse, .leque:focus-visible { scale: 1.06; filter: drop-shadow(0 22px 22px rgba(5, 40, 90, .45)) brightness(1.06); }
+.leque:focus-visible { outline: 3px solid var(--ouro); outline-offset: 4px; border-radius: 12px; }
+.leque.trocou, .pacote-centro.trocou { animation-name: leque-flutua, troca-pulo; animation-duration: 5.5s, .5s; animation-timing-function: ease-in-out, cubic-bezier(.2, .8, .2, 1.4); animation-iteration-count: infinite, 1; }
+.pacote-centro.trocou { animation: troca-pulo .45s cubic-bezier(.2, .8, .2, 1); }
+@keyframes troca-pulo { 0% { scale: 1.05; filter: brightness(1.35); } 100% { scale: 1; filter: none; } }
+/* onda da cor do sabor que se espalha atrás do saquinho quando ele chega ao centro */
+.ondas-sabor { position: absolute; left: 50%; top: 45%; width: 0; height: 0; z-index: 1; pointer-events: none; }
+.ondas-sabor i {
+  position: absolute; left: 0; top: 0; width: 460px; height: 460px; margin: -230px 0 0 -230px; border-radius: 50%;
+  border: 10px solid var(--gelo-meio);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--gelo-claro) 45%, transparent), transparent 70%);
+  opacity: 0; scale: .2;
+}
+.ondas-sabor.pulsa i { animation: onda-sabor .9s cubic-bezier(.15, .7, .3, 1) forwards; }
+.ondas-sabor.pulsa i + i { animation-delay: .12s; border-width: 5px; background: none; }
+@keyframes onda-sabor { 0% { opacity: .85; scale: .2; } 100% { opacity: 0; scale: 1.35; } }
+.saco-voando {
+  position: fixed; left: 0; top: 0; pointer-events: none; object-fit: contain; transform-origin: 50% 50%;
+  filter: drop-shadow(0 22px 20px rgba(5, 40, 90, .4));
+  will-change: transform, width, height, opacity;
+}
+/* brilho da cor do sabor atrás do leque durante o giro */
+.hero-pacotes .brilho-palco { transition: background .6s, scale .6s; }
+.hero.trocando-sabor .brilho-palco { scale: 1.12; background: radial-gradient(closest-side, color-mix(in srgb, var(--gelo-meio) 55%, transparent), color-mix(in srgb, var(--gelo-claro) 18%, transparent) 55%, transparent); }
+/* arrastar para o lado gira o leque; a rolagem vertical continua normal */
+.hero-pacotes { touch-action: pan-y; }
+.dica-sabor {
+  position: absolute; left: 50%; top: 1.5%; z-index: 4; translate: -50% 0; margin: 0;
+  padding: .5em 1.1em; border-radius: 999px; white-space: nowrap; pointer-events: none;
+  background: rgba(11, 42, 94, .72); color: #fff; font-weight: 700; font-size: .85rem;
+  transition: opacity .4s;
+}
+.dica-dedo { display: inline-block; animation: dedo 1.6s ease-in-out infinite; }
+@keyframes dedo { 50% { translate: 0 -4px; } }
+.hero.rolou .dica-sabor { opacity: 0; }
+@keyframes leque-flutua { 50% { translate: -50% -7px; } }
+.pacote-centro {
+  /* alto o bastante para o gelo pendurado na boca aparecer inteiro na tela */
+  bottom: 20%; height: 72%; aspect-ratio: 443 / 926;
+  translate: -50% 0;
+  z-index: 3;
+}
+/* sombra do saquinho como camada fixa atrás (um drop-shadow no canvas era recalculado a cada quadro e travava) */
+.pacote-centro::before {
+  content: ""; position: absolute; left: 4%; right: 4%; top: 18%; bottom: -6%; border-radius: 40%;
+  background: radial-gradient(closest-side, rgba(5, 40, 90, .45), transparent); translate: 0 26px; pointer-events: none;
+}
+.pc-canvas { position: absolute; left: -30%; top: -4%; width: 160%; height: 150%; pointer-events: none; }
+
+.rolar-dica { margin: 1.4rem 0 0; font-weight: 700; color: #fff; transition: opacity .4s; }
+.hero.rolou .rolar-dica { opacity: 0; }
+
+/* gelo que cai em linha reta pela coluna do produto */
+#queda { position: fixed; inset: 0; z-index: 25; pointer-events: none; }
+#particulas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* fronteiras líquidas entre as cores das seções */
+main { position: relative; }
+#liquidos { position: absolute; left: 0; top: 0; width: 100%; height: 0; z-index: 1; pointer-events: none; }
+.borda-liquida { position: absolute; left: 0; display: block; overflow: hidden; }
+.secao > *, .faixa-trilho { position: relative; z-index: 2; }
+#gelo-grupo { position: absolute; inset: 0; opacity: 0; }
+#gelo-voando, .gelo-eco, #gelo-brilho {
+  position: absolute; left: 0; top: 0;
+  width: 140px; height: 340px;
+  overflow: visible;
+  will-change: transform;
+}
+#gelo-voando { filter: drop-shadow(0 22px 26px rgba(5, 40, 90, .38)); }
+/* cópias borradas atrás do bloco: o rastro de velocidade */
+.gelo-eco { opacity: 0; filter: blur(4px); }
+/* com WebGL o bloco é desenhado em 3D (gelo3d.js) e as camadas em SVG ficam de reserva */
+#gelo-3d { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* display (e não visibility): o Firefox continuava pintando o filtro de geada do bloco escondido como pontinhos brancos */
+.tem-3d #gelo-grupo { display: none; }
+
+/* ---------- faixa ---------- */
+.faixa { overflow: hidden; background: var(--marinho); color: #fff; }
+.faixa-trilho {
+  display: flex; align-items: center; gap: 1.6rem; width: max-content;
+  padding: 1rem 0;
+  font-family: var(--display); font-size: clamp(1.6rem, 3vw, 2.4rem); text-transform: uppercase; letter-spacing: .02em;
+  animation: rolar 30s linear infinite;
+}
+.faixa-trilho i { font-style: normal; }
+@keyframes rolar { to { transform: translateX(-50%); } }
+
+/* ---------- seções coloridas ---------- */
+.secao { padding: clamp(4rem, 9vw, 8rem) var(--margem); }
+#sabores { background: var(--azul); color: #fff; }
+#revenda { background: var(--ouro); }
+#como-funciona { background: var(--creme); }
+#atacado { background: var(--vermelho); }
+#unidades { background: var(--marinho); color: #fff; --destaque: var(--ouro); }
+#pontos { background: var(--ouro); color: var(--noite); --destaque: var(--vermelho); }
+#campanhas { background: var(--azul); color: #fff; }
+#duvidas { background: var(--creme); --destaque: var(--azul-escuro); }
+.contato { background: var(--verde); }
+
+.secao-topo { display: grid; gap: 1rem; margin: 0 0 clamp(2rem, 4vw, 3.5rem); }
+.sobre { grid-column: 1 / -1; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: .14em; font-size: .9rem; }
+.secao h2 {
+  font-family: var(--display);
+  font-size: var(--titulo-xl);
+  line-height: .86;
+  text-transform: uppercase;
+}
+#sabores h2, #campanhas h2 { text-shadow: 0 6px 0 var(--marinho); }
+.secao-lead { max-width: 30ch; font-size: clamp(1.05rem, 1.6vw, 1.3rem); font-weight: 500; margin: 0 0 .8rem; }
+#atacado .secao-lead, #atacado .sobre { color: #fff; }
+
+/* ---------- sabores ---------- */
+.sabores { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.4rem; perspective: 1200px; }
+.sabor {
+  --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 30%;
+  position: relative;
+  display: flex; flex-direction: column;
+  border-radius: 28px;
+  background: linear-gradient(160deg, var(--c1), var(--c2));
+  color: var(--t);
+  box-shadow: 0 10px 0 var(--marinho), 0 26px 40px -18px rgba(5, 30, 70, .6);
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transform-style: preserve-3d;
+  transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s;
+  isolation: isolate;
+}
+.sabor:hover { box-shadow: 0 14px 0 var(--marinho), 0 40px 60px -20px rgba(5, 30, 70, .7); transition: transform .08s linear, box-shadow .35s; }
+.sabor-palco { position: relative; height: 300px; border-radius: 28px 28px 0 0; overflow: hidden; }
+.sabor-mascote {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 28%;
+  opacity: 0; transform: scale(1.15);
+  transition: opacity .5s ease, transform .8s cubic-bezier(.2, .8, .2, 1);
+}
+.sabor:hover .sabor-mascote { opacity: 1; transform: scale(1); }
+.sabor-nome-fundo {
+  position: absolute; left: 50%; top: 46%; translate: -50% -50%;
+  font-family: var(--display); font-size: clamp(4rem, 8vw, 6.5rem); line-height: .85; text-transform: uppercase;
+  white-space: nowrap; color: transparent;
+  -webkit-text-stroke: 2px color-mix(in srgb, var(--t) 35%, transparent);
+  transition: opacity .4s, letter-spacing .6s;
+}
+.sabor:hover .sabor-nome-fundo { opacity: 0; letter-spacing: .1em; }
+.sabor-bolhas i {
+  position: absolute; bottom: -20px; width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff, rgba(255, 255, 255, .25) 60%, transparent 70%);
+  animation: sobe 5s linear infinite;
+}
+.sabor-bolhas i:nth-child(1) { left: 12%; animation-delay: -1s; }
+.sabor-bolhas i:nth-child(2) { left: 26%; width: 7px; height: 7px; animation-delay: -3s; animation-duration: 4s; }
+.sabor-bolhas i:nth-child(3) { left: 70%; animation-delay: -2s; animation-duration: 6s; }
+.sabor-bolhas i:nth-child(4) { left: 84%; width: 8px; height: 8px; animation-delay: -4s; }
+.sabor-bolhas i:nth-child(5) { left: 55%; width: 6px; height: 6px; animation-delay: -.5s; animation-duration: 3.5s; }
+.sabor-bolhas i:nth-child(6) { left: 40%; width: 10px; height: 10px; animation-delay: -2.6s; animation-duration: 5.5s; }
+/* fora da tela as animações ficam paradas (menos trabalho enquanto o gelo cai) */
+.sabor:not(.em-tela) *, .faixa:not(.em-tela) .faixa-trilho, .hero:not(.em-tela) :is(.raios, .hero-bolhas i, .leque) { animation-play-state: paused !important; }
+@keyframes sobe { to { transform: translateY(-340px) translateX(12px); opacity: 0; } }
+.sabor-pacote {
+  position: absolute; left: 50%; bottom: 18px; height: 86%; width: auto;
+  translate: -50% 0;
+  filter: drop-shadow(0 18px 18px rgba(0, 0, 0, .35));
+  animation: flutua 4s ease-in-out infinite;
+  transition: transform .6s cubic-bezier(.2, .8, .2, 1), opacity .5s;
+}
+.sabor:nth-child(even) .sabor-pacote { animation-delay: -2s; }
+@keyframes flutua { 50% { translate: -50% -10px; rotate: 2deg; } }
+.sabor:hover .sabor-pacote { transform: translateY(-120%) rotate(-14deg) scale(.8); opacity: 0; }
+.sabor-onda {
+  position: absolute; left: 0; bottom: -1px; width: 200%; height: 34px;
+  fill: color-mix(in srgb, var(--c2) 70%, #000);
+  opacity: .45;
+  animation: ondula 6s linear infinite;
+}
+@keyframes ondula { to { transform: translateX(-50%); } }
+.sabor-brilho {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(400px circle at var(--mx) var(--my), rgba(255, 255, 255, .35), transparent 45%);
+  opacity: 0; transition: opacity .3s; mix-blend-mode: soft-light;
+}
+.sabor:hover .sabor-brilho { opacity: 1; }
+.sabor-info { padding: 1.2rem 1.4rem 1.5rem; display: flex; flex-direction: column; gap: .5rem; flex: 1; }
+.sabor-tag {
+  align-self: flex-start;
+  padding: .3em .8em; border-radius: 999px;
+  background: var(--ouro); color: var(--noite);
+  font-weight: 800; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase;
+}
+.sabor h3 { font-family: var(--display); text-transform: uppercase; font-size: 2.5rem; line-height: .95; }
+.sabor p { margin: 0; font-size: 1rem; font-weight: 500; opacity: .92; }
+.sabor-specs { display: flex; flex-wrap: wrap; gap: .4rem; list-style: none; margin: .3rem 0 .6rem; padding: 0; }
+.sabor-specs li {
+  padding: .3em .75em; border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--t) 45%, transparent);
+  font-size: .8rem; font-weight: 700;
+}
+.sabor-btn {
+  position: relative; overflow: hidden;
+  margin-top: auto; align-self: flex-start;
+  display: inline-flex; align-items: center; gap: .5em;
+  padding: .75em 1.2em; border-radius: 999px;
+  background: var(--t); color: var(--c2);
+  font-weight: 800; text-decoration: none;
+  transition: transform .2s, box-shadow .2s;
+}
+.sabor-btn::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: var(--ouro); transform: translateY(101%); transition: transform .35s cubic-bezier(.2, .8, .2, 1);
+}
+.sabor-btn { isolation: isolate; }
+.sabor-btn:hover { color: var(--noite); transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0, 0, 0, .25); }
+.sabor-btn:hover::before { transform: none; }
+.sabor-cta { --t: #fff; --c1: var(--marinho); --c2: #061a3d; justify-content: center; }
+.sabor-cta .sabor-info { justify-content: center; text-align: center; align-items: center; padding: 2rem 1.6rem; }
+.sabor-cta h3 { color: var(--ouro); }
+.sabor-cta .sabor-btn { align-self: center; background: var(--ouro); color: var(--noite); }
+.kit-pacotes { height: 150px; width: auto; filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .4)); animation: flutua2 4s ease-in-out infinite; }
+@keyframes flutua2 { 50% { transform: translateY(-8px) rotate(-3deg); } }
+
+/* ---------- revelação e títulos ---------- */
+.revela { opacity: 0; transform: translateY(32px); transition: opacity .6s ease var(--atraso, 0ms), transform .7s cubic-bezier(.2, .8, .2, 1) var(--atraso, 0ms); }
+.revela.visivel { opacity: 1; transform: none; }
+.sabor.revela { transform: translateY(60px) rotateX(12deg); }
+.sabor.revela.visivel { transform: rotateX(var(--rx)) rotateY(var(--ry)); }
+.revela-titulo.revela { opacity: 1; transform: none; }
+.sabor.pronto, .plano.pronto { transition: transform .15s linear, box-shadow .35s; }
+/* folga em cima e embaixo para o recorte da animação não comer acentos (Ú, Õ) nem a cedilha (Ç) */
+.palavra { display: inline-block; overflow: hidden; vertical-align: bottom; padding: .2em 0 .14em; margin: -.2em 0 -.14em; }
+.palavra > span { display: inline-block; transform: translateY(105%) rotate(6deg); transition: transform .7s cubic-bezier(.2, .8, .2, 1) calc(var(--i) * 60ms); }
+.visivel .palavra > span { transform: none; }
+.secao h2 em { font-style: normal; position: relative; display: inline-block; color: var(--destaque, var(--ouro)); }
+.secao h2 em::after {
+  content: ""; position: absolute; left: -2%; right: -2%; bottom: .06em; height: .18em; z-index: -1;
+  border-radius: 999px; background: currentColor; opacity: .3;
+  transform: scaleX(0); transform-origin: left; transition: transform 1s cubic-bezier(.2, .8, .2, 1) .5s;
+}
+.visivel h2 em::after, h2.visivel em::after { transform: none; }
+#revenda { --destaque: var(--vermelho); }
+#como-funciona { --destaque: var(--azul-escuro); }
+#atacado { --destaque: #fff; }
+.contato { --destaque: var(--ouro); }
+.sobre { display: inline-flex; align-items: center; gap: .6em; justify-self: start; }
+.sobre::before { content: ""; width: 28px; height: 3px; border-radius: 3px; background: currentColor; }
+
+/* ---------- hero: frase de venda ---------- */
+.hero-frase {
+  margin: 0 0 1rem;
+  font-family: var(--display); text-transform: uppercase;
+  font-size: clamp(2.2rem, 3.7vw, 4.3rem); line-height: 1.1; letter-spacing: .005em;
+  text-shadow: 0 5px 0 var(--marinho), 0 18px 30px rgba(5, 40, 90, .3);
+}
+/* "vende sozinho" em ouro, com um traço de pincel por baixo */
+.hero-frase span { position: relative; color: var(--ouro); white-space: nowrap; }
+.hero-frase span::after {
+  content: ""; position: absolute; left: -2%; right: -2%; bottom: .2em; height: .14em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 20' preserveAspectRatio='none'%3E%3Cpath d='M4 14 C60 4 130 3 200 7 S280 12 296 6' fill='none' stroke='%23f5c518' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  filter: drop-shadow(0 3px 0 var(--marinho));
+  transform-origin: left; animation: traco 1s .2s cubic-bezier(.6, 0, .2, 1) both;
+}
+@keyframes traco { from { transform: scaleX(0); } }
+
+/* ---------- por que revender ---------- */
+.beneficios { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.beneficio {
+  position: relative; overflow: hidden;
+  padding: 1.6rem 1.5rem 1.5rem;
+  border-radius: var(--raio);
+  background: #fff; color: var(--noite);
+  box-shadow: 0 8px 0 rgba(11, 42, 94, .9);
+  transition: transform .3s cubic-bezier(.2, .8, .2, 1), box-shadow .3s;
+}
+.beneficio::after {
+  content: ""; position: absolute; right: -40px; top: -40px; width: 120px; height: 120px; border-radius: 50%;
+  background: var(--azul); opacity: .12; transition: transform .5s cubic-bezier(.2, .8, .2, 1);
+}
+.beneficio:hover { transform: translateY(-6px) rotate(-.6deg); box-shadow: 0 14px 0 rgba(11, 42, 94, .9); }
+.beneficio:hover::after { transform: scale(2.6); }
+.beneficio-ic {
+  display: grid; place-items: center; width: 58px; height: 58px; margin-bottom: .9rem;
+  border-radius: 18px; background: var(--marinho); font-size: 1.7rem;
+  transition: transform .4s cubic-bezier(.3, 1.6, .5, 1);
+}
+.beneficio:hover .beneficio-ic { transform: rotate(-10deg) scale(1.12); }
+.beneficio h3 { font-family: var(--display); font-size: 1.8rem; text-transform: uppercase; line-height: 1; margin-bottom: .4rem; }
+.beneficio p { margin: 0; font-weight: 500; color: #3a4256; }
+
+/* ---------- dica ---------- */
+.dica {
+  display: flex; align-items: center; gap: 1.2rem;
+  margin-top: 1.4rem; padding: 1.2rem 1.4rem;
+  border-radius: var(--raio); border: 2px dashed rgba(11, 42, 94, .35);
+}
+.dica img { height: 90px; width: auto; rotate: -10deg; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .25)); }
+.dica p { margin: 0; font-weight: 500; }
+
+/* ---------- formulário de revenda ---------- */
+.form-revenda { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem 1rem; margin: 0 0 1rem; }
+.form-revenda label { display: grid; gap: .35rem; font-weight: 800; font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: var(--marinho); }
+.form-revenda .largo { grid-column: 1 / -1; }
+.form-revenda input, .form-revenda select {
+  font: 600 1rem var(--corpo); color: var(--noite);
+  padding: .85em 1em; border-radius: 14px; border: 2px solid transparent;
+  background: rgba(255, 255, 255, .92);
+  transition: border-color .2s, box-shadow .2s;
+}
+.form-revenda input:focus, .form-revenda select:focus { outline: none; border-color: var(--marinho); box-shadow: 0 0 0 4px rgba(11, 42, 94, .2); }
+.form-revenda button { justify-self: start; cursor: pointer; border: 0; }
+.contato-info a { color: inherit; }
+.plano-sub { margin: .2rem 0 0; opacity: .7; font-weight: 600; }
+
+/* ---------- unidades ---------- */
+.unidades { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.unidade {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: .6rem;
+  padding: 1.8rem 1.6rem 1.6rem;
+  border-radius: var(--raio);
+  background: linear-gradient(160deg, #15407f, #0d2f66);
+  border: 1.5px solid rgba(255, 255, 255, .14);
+  transition: transform .3s cubic-bezier(.2, .8, .2, 1), border-color .3s;
+}
+.unidade:hover { transform: translateY(-5px); border-color: var(--ouro); }
+.unidade-pino {
+  position: absolute; right: 1.4rem; top: 1.4rem; width: 26px; height: 26px;
+  border-radius: 50% 50% 50% 0; rotate: -45deg; background: var(--ouro);
+  box-shadow: 0 0 0 6px rgba(245, 197, 24, .18);
+}
+.unidade-pino::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--marinho); }
+.unidade:hover .unidade-pino { animation: pula .6s ease; }
+@keyframes pula { 40% { translate: 0 -8px; } }
+.unidade-tipo { margin: 0; font-weight: 800; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ouro); }
+.unidade h3 { font-family: var(--display); font-size: 2.2rem; text-transform: uppercase; line-height: 1; }
+.unidade ul { list-style: none; padding: 0; margin: .2rem 0 .4rem; display: grid; gap: .45rem; }
+.unidade li { display: flex; justify-content: space-between; gap: 1rem; padding-bottom: .45rem; border-bottom: 1px dashed rgba(255, 255, 255, .18); }
+.unidade li strong { font-weight: 600; opacity: .7; }
+.unidade p { margin: 0; opacity: .9; }
+.unidade-acoes { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: auto; padding-top: .4rem; }
+.unidade .btn-vazado { color: #fff; }
+.unidade-nova { grid-column: 1 / -1; background: linear-gradient(120deg, var(--azul), var(--azul-escuro)); border-style: dashed; }
+
+/* ---------- dúvidas ---------- */
+.perguntas { display: grid; gap: .7rem; }
+.pergunta { border-radius: 18px; background: #fff; box-shadow: 0 6px 0 rgba(11, 42, 94, .12); overflow: hidden; transition: box-shadow .3s; }
+.pergunta[open] { box-shadow: 0 6px 0 var(--marinho); }
+.pergunta summary {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: 1.1rem 1.3rem; cursor: pointer; list-style: none;
+  font-weight: 800; font-size: 1.08rem; color: var(--marinho);
+}
+.pergunta summary::-webkit-details-marker { display: none; }
+.pergunta-ic { position: relative; flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--azul); transition: transform .35s cubic-bezier(.3, 1.4, .5, 1), background .3s; }
+.pergunta-ic::before, .pergunta-ic::after { content: ""; position: absolute; left: 50%; top: 50%; width: 12px; height: 2.5px; border-radius: 2px; background: #fff; translate: -50% -50%; }
+.pergunta-ic::after { rotate: 90deg; transition: rotate .35s; }
+.pergunta[open] .pergunta-ic { background: var(--ouro); transform: rotate(180deg); }
+.pergunta[open] .pergunta-ic::after { rotate: 0deg; }
+.resposta { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .4s cubic-bezier(.2, .8, .2, 1); }
+.pergunta[open] .resposta { grid-template-rows: 1fr; }
+.resposta p { overflow: hidden; margin: 0; padding: 0 1.3rem; color: #3a4256; font-weight: 500; }
+.pergunta[open] .resposta p { padding-bottom: 1.2rem; }
+
+/* ---------- como usar ---------- */
+.passos { position: relative; list-style: none; padding: 0 0 0 0; margin: 0; display: grid; gap: 1rem; --progresso: 0; }
+.passos::before { content: ""; position: absolute; left: 4.4rem; top: 2rem; bottom: 2rem; width: 4px; border-radius: 4px; background: linear-gradient(var(--marinho), var(--marinho)) 0 0 / 100% calc(var(--progresso) * 100%) no-repeat, rgba(11, 42, 94, .18); }
+.passos li { display: grid; grid-template-columns: auto 1fr; column-gap: 1.6rem; align-items: center; }
+.passos li .passo-n { grid-row: span 2; margin: 0; }
+.passos li { position: relative; padding: 2rem 2rem; border-radius: var(--raio); background: var(--marinho); color: #fff; transition: transform .4s, box-shadow .4s, background .4s; }
+.passos li.ativo { box-shadow: 0 8px 0 rgba(0, 0, 0, .2); }
+.passos li.ativo .passo-n { color: var(--ouro); -webkit-text-stroke: 0; }
+.passo-n { display: block; font-family: var(--display); font-size: clamp(5rem, 9vw, 8rem); line-height: .9; color: transparent; -webkit-text-stroke: 2px var(--ouro); margin-bottom: 1rem; transition: color .5s; }
+.passos h3 { font-family: var(--display); font-size: 2.2rem; text-transform: uppercase; line-height: 1; margin-bottom: .6rem; }
+.passos p { margin: 0; color: #d2dcef; font-size: 1.05rem; }
+
+/* ---------- atacado ---------- */
+.planos { display: grid; gap: 1.2rem; }
+.plano { --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 30%; position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 2.6rem 2.4rem; border-radius: var(--raio); background: #fff; box-shadow: 0 10px 0 rgba(0, 0, 0, .18); transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)); transition: transform .35s cubic-bezier(.2, .8, .2, 1); }
+.plano::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(500px circle at var(--mx) var(--my), rgba(255, 255, 255, .25), transparent 45%); opacity: 0; transition: opacity .3s; }
+.plano:hover::after { opacity: 1; }
+.plano.revela.visivel { transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)); }
+.plano h3 { font-family: var(--display); font-size: clamp(2.6rem, 5vw, 4rem); text-transform: uppercase; line-height: .95; }
+.preco { font-family: var(--display); font-size: clamp(4rem, 8vw, 6.5rem); line-height: 1; margin: 1rem 0 1.4rem; }
+.preco span { font-size: .4em; vertical-align: top; margin-right: .1em; }
+.preco small { font-family: var(--corpo); font-size: 1rem; opacity: .65; margin-left: .3em; }
+.preco-txt { font-size: clamp(2rem, 3.4vw, 2.8rem); line-height: 1; color: var(--ouro); }
+.plano ul { list-style: none; padding: 0; margin: 0 0 2rem; display: grid; gap: .75rem; font-size: 1.08rem; }
+.plano li { padding-left: 1.9rem; position: relative; }
+.plano li::before { content: "👑"; position: absolute; left: 0; font-size: .95rem; }
+.plano .btn { margin-top: auto; }
+.plano-rei { background: var(--marinho); color: #fff; }
+.plano-tag { position: absolute; top: 1.4rem; right: 1.4rem; background: var(--ouro); color: var(--noite); font-weight: 800; font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; padding: .4em .9em; border-radius: 999px; }
+
+/* ---------- galeria ---------- */
+.galeria { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; }
+.galeria figure {
+  margin: 0; position: relative; overflow: hidden; aspect-ratio: 3 / 4; border-radius: 22px; background: var(--marinho);
+  box-shadow: 0 14px 30px -12px rgba(5, 20, 50, .55);
+}
+/* a foto da modelo é o destaque: ocupa duas colunas e duas linhas */
+.galeria .galeria-destaque { grid-column: span 2; grid-row: span 2; aspect-ratio: auto; }
+/* a imagem do destaque não define a altura: ele ocupa exatamente as duas linhas ao lado */
+.galeria .galeria-destaque img { position: absolute; inset: 0; }
+.galeria img { width: 100%; height: 100%; object-fit: cover; transition: transform .7s cubic-bezier(.2, .8, .2, 1); }
+.galeria .galeria-destaque img { object-position: 50% 20%; }
+.galeria figure::after { content: ""; position: absolute; inset: 45% 0 0; background: linear-gradient(transparent, rgba(5, 15, 40, .85)); pointer-events: none; }
+.galeria figure:hover img { transform: scale(1.06); }
+.galeria figcaption {
+  position: absolute; left: 1rem; right: 1rem; bottom: .85rem; z-index: 1;
+  font-family: var(--display); font-size: clamp(1.1rem, 1.6vw, 1.5rem); line-height: 1; text-transform: uppercase; color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .4);
+}
+.galeria .galeria-destaque figcaption { font-size: clamp(1.6rem, 3vw, 2.6rem); color: var(--ouro); left: 1.4rem; bottom: 1.3rem; }
+.galeria-insta { margin: 2.5rem 0 0; }
+#campanhas .btn-vazado { color: #fff; }
+
+/* ---------- contato + copão ---------- */
+
+.contato-copo { display: grid; place-items: center; }
+#copao { width: min(100%, 400px); height: auto; overflow: visible; }
+/* com 3D: o bloco é desenhado num canvas entre o fundo do copo e o vidro da frente (gelo3d.js) */
+.copo-3d { position: relative; }
+.copao-gelo, .copao-frente { position: absolute; pointer-events: none; overflow: visible; }
+/* camada estática do copo em uma camada própria da placa de vídeo: não é redesenhada quando o resto mexe */
+.copao-fixa, .copao-gelo { will-change: transform; }
+.contato h2 { margin: 0 0 1.2rem; }
+.contato p { font-size: clamp(1.1rem, 1.8vw, 1.4rem); max-width: 40ch; margin: 0 0 2.2rem; color: #fff; font-weight: 500; }
+.contato-info { list-style: none; padding: 2rem 0 0; margin: 3rem 0 0; display: flex; flex-wrap: wrap; gap: 1.2rem 4rem; border-top: 2px solid rgba(11, 13, 18, .25); font-size: 1.2rem; font-weight: 700; }
+.contato-info strong { display: block; text-transform: uppercase; font-size: .78rem; letter-spacing: .14em; color: #fff; }
+
+/* ---------- rodapé ---------- */
+.rodape { text-align: center; padding: 3.5rem 16px 6rem; color: #b9c8e6; background: var(--marinho); }
+.logo-branco { height: 150px; width: auto; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, .25)); }
+.rodape p { margin: 1rem 0 0; }
+.isca { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.rodape-links { display: flex; flex-wrap: wrap; justify-content: center; gap: .8rem 1.6rem; }
+.rodape-links a { display: inline-flex; align-items: center; gap: .4em; font-weight: 700; text-decoration: none; color: #fff; }
+.rodape small { display: block; margin-top: 1.4rem; }
+/* assinatura "feito por koraki", no mesmo padrão do site do Pérolas */
+.koraki-mark {
+  --koraki-cut: var(--marinho);
+  display: inline-flex; align-items: center; gap: .45rem; margin-top: 1.4rem;
+  color: rgba(245, 197, 24, .75); font-size: .74rem; letter-spacing: .08em; text-decoration: none; transition: color .3s;
+}
+.koraki-mark svg { width: 1.2rem; height: 1.2rem; }
+.koraki-mark b { font-size: .98rem; font-weight: 600; letter-spacing: .02em; }
+.koraki-mark:hover { color: var(--ouro); }
+/* sem o contorno de foco em volta; no teclado a assinatura acende e o nome fica sublinhado */
+.koraki-mark:focus, .koraki-mark:focus-visible { outline: none; }
+.koraki-mark:focus-visible { color: var(--ouro); }
+.koraki-mark:focus-visible b { text-decoration: underline; text-underline-offset: 3px; }
+
+.zap-flutuante { position: fixed; right: 18px; bottom: 18px; z-index: 30; display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; background: #25d366; color: #fff; box-shadow: 0 10px 25px -6px rgba(0, 0, 0, .45); }
+.zap-flutuante svg { width: 32px; height: 32px; }
+
+/* ---------- responsivo ---------- */
+@media (max-width: 1020px) {
+  .sabor-palco { height: 260px; }
+  .sabores { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 820px) {
+  :root { --topo-h: 64px; }
+  .menu { display: none; }
+  .logo-svg { height: 54px; }
+  .duo { grid-template-columns: 1fr; }
+  .duo-trilho { display: none; }
+  /* faixa livre à direita para o gelo descer no celular */
+  .secao:not(.contato) { padding-right: 60px; }
+  /* selo do plano entra no fluxo para não cobrir o título em telas estreitas */
+  .plano-tag { position: static; align-self: flex-start; margin-bottom: 1rem; }
+  .hero-palco.duo { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 0; }
+  /* em telas baixas (iPhone SE) a logo e o título encolhem para sobrar espaço para o leque */
+  .hero-logo { max-width: min(86vw, 52svh); }
+  .hero-frase { font-size: clamp(1.9rem, min(7.5vw, 5.2svh), 3.6rem); margin-bottom: .9rem; }
+  .hero-acoes { flex-wrap: nowrap; gap: .5rem; }
+  .hero-titulo { margin-bottom: .8rem; }
+  .hero .lead, .hero .selo, .hero-fatos, .rolar-dica { display: none; }
+  .hero-acoes .btn { padding: .7em 1.05em; font-size: clamp(.82rem, 3.6vw, 1rem); white-space: nowrap; }
+  /* mais alto no celular para o gelo sair dentro da tela */
+  .pacote-centro { height: 72%; bottom: 17%; }
+  .leque { height: calc(min(48%, 36vw) * var(--leque-escala, 1)); }
+  /* no celular a dica fica acima do leque (embaixo o botão do WhatsApp cobria) */
+  .dica-sabor { top: 2%; font-size: .78rem; }
+  /* tablet: duas colunas; celular (≤520px) volta para uma */
+  .sabores, .galeria { grid-template-columns: repeat(2, 1fr); }
+  .galeria .galeria-destaque { grid-row: span 1; aspect-ratio: 4 / 5; }
+  .passos li { grid-template-columns: 1fr; }
+  .passos li .passo-n { grid-row: auto; margin-bottom: .6rem; }
+  .passos::before { display: none; }
+  .beneficios, .unidades { grid-template-columns: repeat(2, 1fr); }
+  .form-revenda { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .sabores, .beneficios, .unidades { grid-template-columns: 1fr; }
+  .sabor { min-height: 0; }
+  .plano { padding: 2.2rem 1.5rem; }
+}
+@media (hover: none) {
+  .sabor-mascote { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .revela, .palavra > span { transition: none; opacity: 1; transform: none; }
+  .sabor-pacote, .sabor-bolhas i, .sabor-onda, .kit-pacotes, .leque, .raios, .hero-frase span::after { animation: none; }
+  .leque.trocou, .pacote-centro.trocou, .dica-dedo { animation: none !important; }
+  .hero-bolhas { display: none; }
+  .faixa-trilho { animation: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* celular deitado e telas baixas no layout de duas colunas: o hero mostra só o essencial */
+@media (min-width: 821px) and (max-height: 600px) {
+  .hero-logo { max-width: min(300px, 34vw); }
+  .hero .lead, .hero-fatos, .rolar-dica { display: none; }
+  .hero-titulo { margin-bottom: .6rem; }
+  .selo { margin-bottom: .5rem; }
+  .hero-acoes { flex-wrap: nowrap; }
+  .hero-acoes .btn { padding: .7em 1.2em; font-size: .95rem; }
+  .hero-frase { font-size: clamp(1.8rem, 9svh, 3.4rem); margin-bottom: .8rem; }
+}
+@media (min-width: 821px) and (max-height: 440px) { .hero-titulo, .selo { display: none; } }
+
+/* ---------- onde encontrar: pontos que já revendem ---------- */
+.filtros { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1.4rem; }
+.filtro {
+  display: inline-flex; align-items: center; gap: .45em; padding: .55em 1em; border: 2px solid var(--noite); border-radius: 999px;
+  background: transparent; color: var(--noite); font: 700 .9rem var(--corpo); cursor: pointer;
+  transition: background .2s, color .2s, transform .2s;
+}
+.filtro b { display: inline-grid; place-items: center; min-width: 1.6em; height: 1.6em; padding: 0 .35em; border-radius: 999px; background: var(--noite); color: var(--ouro); font-size: .78rem; }
+.filtro:hover { transform: translateY(-2px); }
+.filtro.ativo { background: var(--noite); color: #fff; }
+.filtro.ativo b { background: var(--ouro); color: var(--noite); }
+/* cartões todos do mesmo tamanho: mesma largura e mesma altura em todas as linhas */
+.pontos { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .8rem; }
+.ponto {
+  position: relative; display: flex; flex-direction: column; gap: .2rem; padding: .9rem 1rem .9rem 3.2rem; border-radius: 18px;
+  background: #fff; box-shadow: 0 6px 0 rgba(0, 0, 0, .14);
+  animation: ponto-entra .45s cubic-bezier(.2, .8, .2, 1) both;
+}
+.ponto strong { font-family: var(--display); font-weight: 400; font-size: 1.25rem; line-height: 1.05; text-transform: uppercase; }
+.ponto small { color: #5b6476; font-weight: 600; }
+.ponto-pino {
+  position: absolute; left: 1rem; top: 1.05rem; width: 22px; height: 22px; border-radius: 50% 50% 50% 0; rotate: -45deg;
+  background: var(--vermelho); box-shadow: 0 0 0 5px rgba(227, 38, 47, .15);
+}
+.ponto-pino::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: #fff; }
+.ponto:hover .ponto-pino { animation: pula .6s ease; }
+.ponto[hidden] { display: none; }
+/* link para o Google Maps: só nos pontos com endereço confirmado */
+.ponto-mapa {
+  justify-self: start; margin-top: .45rem; display: inline-flex; align-items: center; gap: .3em;
+  padding: .3em .75em; border-radius: 999px; background: #e9f6fe; color: var(--azul-escuro);
+  font-weight: 800; font-size: .8rem; text-decoration: none; transition: background .2s, color .2s;
+}
+.ponto-mapa:hover, .ponto-mapa:focus-visible { background: var(--azul); color: #fff; }
+/* endereço confirmado e redes sociais do ponto */
+.ponto-end { display: flex; gap: .35em; align-items: baseline; margin-top: .15rem; font-size: .82rem; font-weight: 600; color: #2b3445; line-height: 1.3; }
+.ponto-end .ic { flex: none; width: .85em; height: .85em; color: var(--vermelho); translate: 0 .08em; }
+/* links sempre no rodapé do cartão, alinhados entre os cartões da mesma linha */
+.ponto-links { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: auto; padding-top: .45rem; }
+.ponto-links .ponto-mapa { margin-top: 0; }
+.ponto-rede {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: #f1f3f8; color: var(--noite); transition: background .2s, color .2s, transform .2s;
+}
+.ponto-rede .ic { width: 16px; height: 16px; }
+.ponto-rede:hover, .ponto-rede:focus-visible { transform: translateY(-2px); color: #fff; background: #1877f2; }
+.ponto-rede[href*="instagram"]:hover, .ponto-rede[href*="instagram"]:focus-visible { background: linear-gradient(45deg, #f58529, #dd2a7b 50%, #8134af); }
+.ponto-novo { background: var(--noite); color: #fff; }
+.ponto-novo small { color: #c9d3e6; }
+.ponto-novo .btn { align-self: flex-start; margin-top: auto; }
+.ponto-novo .ponto-pino { background: var(--ouro); box-shadow: 0 0 0 5px rgba(245, 197, 24, .2); }
+.ponto-novo .ponto-pino::after { background: var(--noite); }
+@keyframes ponto-entra { from { opacity: 0; transform: translateY(12px) scale(.97); } }
+@media (prefers-reduced-motion: reduce) { .ponto { animation: none; } }
+
+/* todos os cartões do mesmo tamanho, na ordem da lista: a altura de todas as linhas é a do cartão mais alto
+   (os com endereço); os sem endereço levam o selo de revenda no rodapé, alinhado com o "Ver no mapa" */
+.pontos { grid-template-columns: repeat(auto-fill, minmax(min(100%, 215px), 1fr)); grid-auto-rows: 1fr; }
+.ponto[hidden] { display: none; }
+.ponto-selo { display: inline-flex; align-items: center; gap: .35em; padding: .3em .7em; border-radius: 999px; background: #fff4cc; color: #7a5a00; font-weight: 800; font-size: .76rem; white-space: nowrap; }
+.ponto-selo .ic { width: 1.1em; height: 1.1em; color: var(--ouro-escuro); }
+.ponto-links { flex-wrap: nowrap; gap: .3rem; }
+.ponto:has(.ponto-end) { padding-right: .8rem; }
+.ponto-links .ponto-mapa { white-space: nowrap; flex: none; padding: .3em .6em; }
+.ponto-links .ponto-rede { flex: none; width: 28px; height: 28px; }
+
+/* telas largas: com o conteúdo mais largo cabem 3 sabores e 3 benefícios por linha */
+@media (min-width: 1200px) {
+  .sabores, .beneficios { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ---------- onde já entregamos (card em #pontos) ---------- */
+.entregas {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1.2rem 1.6rem;
+  margin-top: 1.2rem; padding: 1.4rem 1.6rem; border-radius: var(--raio);
+  background: var(--noite); color: #fff; box-shadow: 0 8px 0 rgba(11, 42, 94, .9);
+}
+.entregas-ic {
+  display: grid; place-items: center; width: 3.6rem; height: 3.6rem; border-radius: 50%;
+  background: var(--ouro); font-size: 1.8rem; align-self: start;
+}
+.entregas-tipo { margin: 0 0 .15rem; font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ouro); }
+.entregas h3 { margin: 0 0 .8rem; font-size: clamp(1.3rem, 2.2vw, 1.8rem); line-height: 1.1; }
+.entregas-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .45rem; }
+.entregas-lista li {
+  padding: .4rem .85rem; border-radius: 999px; font-weight: 700; font-size: .9rem;
+  background: rgba(255, 255, 255, .1); border: 2px solid rgba(245, 197, 24, .45); color: #fff;
+}
+.entregas-lista li::before { content: "📍"; margin-right: .3rem; font-size: .85em; }
+.entregas-acao { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; max-width: 24ch; }
+.entregas-acao p { margin: 0; font-size: .9rem; color: #c9d3e6; }
+@media (max-width: 900px) {
+  .entregas { grid-template-columns: auto 1fr; }
+  .entregas-acao { grid-column: 1 / -1; max-width: none; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+}
+@media (max-width: 520px) {
+  .entregas { grid-template-columns: 1fr; padding: 1.2rem; }
+  .entregas-ic { width: 3rem; height: 3rem; font-size: 1.5rem; }
+}

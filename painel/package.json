@@ -1,0 +1,11 @@
+{
+  "name": "kinggelo-painel",
+  "private": true,
+  "description": "Site e painel administrativo da King Gelo (estoque, clientes, pedidos e avisos de reposição)",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "admin": "node --disable-warning=ExperimentalWarning criar-admin.js",
+    "exemplo": "node --disable-warning=ExperimentalWarning exemplo.js"
+  }
+}
