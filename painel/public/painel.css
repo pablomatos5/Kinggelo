@@ -358,3 +358,25 @@ dialog::backdrop { background: rgba(8, 25, 55, .55); backdrop-filter: blur(3px);
   .linha-item { grid-template-columns: auto minmax(0, 1fr); }
   .linha-item .dir { grid-column: 2; justify-content: flex-start; max-width: none; text-align: left; }
 }
+
+/* ---------- unidades (Cametá e Tucuruí) ---------- */
+.chips-unidade { margin-top: -6px; }
+.chips-unidade .chip[aria-pressed="true"] { background: var(--azul-escuro); border-color: var(--azul-escuro); }
+.tag.unidade-tag { background: color-mix(in srgb, var(--cor) 14%, #fff); color: color-mix(in srgb, var(--cor) 75%, #000); }
+.cartao-unidade { border-top: 5px solid var(--cor); }
+.cartao-unidade h2 span { display: inline-flex; align-items: center; gap: 8px; font-size: 1.25rem; }
+.cartao-unidade h2 span .ic { color: var(--cor); }
+.cartao-unidade h2 a { display: inline-flex; align-items: center; gap: 6px; }
+.numeros-unidade { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.numeros-unidade div { display: grid; align-content: start; gap: 2px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--cor) 9%, #fff); }
+.numeros-unidade strong { font-family: var(--display); font-size: 1.6rem; line-height: 1.1; color: var(--marinho); overflow-wrap: anywhere; }
+.numeros-unidade span { font-size: .78rem; font-weight: 600; color: var(--suave); }
+.barra-unidade { height: 6px; margin: 14px 0 4px; border-radius: 999px; background: #eef2f8; overflow: hidden; }
+.barra-unidade i { display: block; height: 100%; border-radius: inherit; background: var(--cor); }
+.sub-titulo { margin: 14px 0 10px; font-size: .9rem; font-weight: 800; color: var(--marinho); }
+.sabores-unidade { margin: 12px 0 0; }
+.acoes-unidade { margin-top: 14px; }
+.acoes-unidade .btn { flex: 1 1 auto; justify-content: center; }
+@container (max-width: 560px) {
+  .numeros-unidade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

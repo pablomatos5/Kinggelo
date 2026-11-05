@@ -5,7 +5,7 @@ const db = abrirBanco();
 const dias = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 19).replace('T', ' ');
 
 transacao(db, () => {
-  db.exec('DELETE FROM avisos; DELETE FROM pagamentos; DELETE FROM despesas; DELETE FROM movimentos; DELETE FROM itens_pedido; DELETE FROM pedidos; DELETE FROM clientes;');
+  db.exec('DELETE FROM avisos; DELETE FROM pagamentos; DELETE FROM despesas; DELETE FROM movimentos; DELETE FROM itens_pedido; DELETE FROM pedidos; DELETE FROM clientes; DELETE FROM contatos_site;');
   // só os 8 sabores de fábrica (produtos criados em teste saem)
   db.prepare(`DELETE FROM produtos WHERE slug NOT IN (${SABORES.map(() => '?').join(',')})`).run(...SABORES.map((x) => x[0]));
   db.exec('UPDATE produtos SET estoque = 0, preco_atacado = 280, preco_varejo = 400, estoque_minimo = 60, ativo = 1');
@@ -15,7 +15,8 @@ transacao(db, () => {
     db.prepare('UPDATE produtos SET estoque = ? WHERE id = ?').run(estoque[i], p.id);
     db.prepare("INSERT INTO movimentos (produto_id, tipo, quantidade, motivo, criado_em) VALUES (?, 'entrada', ?, 'Produção (exemplo)', ?)").run(p.id, estoque[i] + 200, dias(30));
   });
-  const cli = db.prepare('INSERT INTO clientes (nome, estabelecimento, tipo, cidade, telefone, status, origem, volume_informado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  const cli = db.prepare('INSERT INTO clientes (nome, estabelecimento, tipo, cidade, telefone, status, origem, volume_informado, unidade) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const unidadeDe = (cidade) => (/tucuru/i.test(cidade) ? 'tucurui' : 'cameta');
   const ped = db.prepare("INSERT INTO pedidos (cliente_id, status, pagamento, pago, baixado, criado_em, entregue_em) VALUES (?, 'entregue', ?, ?, 1, ?, ?)");
   const item = db.prepare('INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unit) VALUES (?, ?, ?, 280)');
   const clientes = [
@@ -26,13 +27,25 @@ transacao(db, () => {
     ['Rafael Costa', 'Adega Beira Lago', 'Casa de bebidas', 'Tucuruí-PA', '94991112222', [[18, [60, 30, 30, 20]], [9, [60, 40, 30, 20]]]],
   ];
   for (const [nome, ponto, tipo, cidade, tel, hist] of clientes) {
-    const c = cli.run(nome, ponto, tipo, cidade, tel, 'ativo', 'painel', '').lastInsertRowid;
+    const c = cli.run(nome, ponto, tipo, cidade, tel, 'ativo', 'painel', '', unidadeDe(cidade)).lastInsertRowid;
     hist.forEach(([d, qtds], k) => {
       const p = ped.run(c, k % 2 ? 'dinheiro' : 'pix', k < hist.length - 1 ? 1 : 0, dias(d), dias(d)).lastInsertRowid;
       qtds.forEach((q, j) => item.run(p, prods[j].id, q));
     });
   }
-  cli.run('Pedro Alves', 'Conveniência Pôr do Sol', 'Casa de bebidas', 'Limoeiro do Ajuru-PA', '91944443333', 'lead', 'site', '50 a 200 saquinhos');
+  cli.run('Pedro Alves', 'Conveniência Pôr do Sol', 'Casa de bebidas', 'Limoeiro do Ajuru-PA', '91944443333', 'lead', 'site', '50 a 200 saquinhos', 'cameta');
+  cli.run('Lúcia Ferreira', 'Mercearia Vila Permanente', 'Mercado / supermercado', 'Tucuruí-PA', '94982223333', 'lead', 'site', 'Até 50 saquinhos', 'tucurui');
+
+  // toques nos botões de WhatsApp do site, espalhados pelos últimos 25 dias
+  const contato = db.prepare('INSERT INTO contatos_site (unidade, origem, detalhe, criado_em) VALUES (?, ?, ?, ?)');
+  const sabores = ['Melancia', 'Morango', 'Maracujá', 'Limão', 'Frutas Vermelhas'];
+  for (let k = 0; k < 46; k++) {
+    const unidade = k % 3 === 0 ? 'tucurui' : 'cameta';
+    const origem = ['revender', 'sabor', 'sabor', 'pedido', 'contato', 'entrega'][k % 6];
+    contato.run(unidade, origem, origem === 'sabor' ? sabores[k % sabores.length] : '', dias((k * 13) % 25 + (k % 5) / 10));
+  }
+  contato.run('cameta', 'formulario', '', dias(4));
+  contato.run('tucurui', 'formulario', '', dias(1));
 
   // pedidos pagos ganham o pagamento; um pedido pago só pela metade
   const total = (id) => db.prepare('SELECT SUM(quantidade * preco_unit) AS t FROM itens_pedido WHERE pedido_id = ?').get(id).t;

@@ -2,11 +2,13 @@
 // Rotas autenticadas do painel: [método, padrão, função({ db, params, corpo, query })].
 const fs = require('node:fs');
 const path = require('node:path');
-const { transacao } = require('./banco');
+const { transacao, UNIDADES } = require('./banco');
 const backup = require('./backup');
 const { preverCliente, mensagemAviso, config } = require('./previsao');
 
 const erro = (status, msg) => Object.assign(new Error(msg), { status });
+const UNIDADE_IDS = UNIDADES.map((u) => u.id);
+const unidadeValida = (v, padrao = 'cameta') => (UNIDADE_IDS.includes(v) ? v : padrao);
 const txt = (v, n = 200) => String(v ?? '').trim().slice(0, n);
 const inteiro = (v, min = 0) => {
   const n = Math.round(Number(v));
@@ -33,6 +35,37 @@ const slugDe = (nome) => String(nome).normalize('NFD').replace(/[̀-ͯ]/g, '').t
 const UNIDADES_PEDIDO = '(SELECT COALESCE(SUM(quantidade), 0) FROM itens_pedido WHERE pedido_id = p.id)';
 
 // ---------- estoque ----------
+// o que cada unidade movimentou nos últimos `dias`: contatos pelo WhatsApp do site, interessados, clientes e pedidos.
+// Pedido conta para a unidade do cliente.
+function porUnidade(db, dias) {
+  const desde = `-${dias} days`;
+  const contatos = db.prepare(`SELECT unidade, origem, COUNT(*) AS n FROM contatos_site WHERE criado_em >= datetime('now', ?) GROUP BY 1, 2`).all(desde);
+  const sabores = db.prepare(`SELECT unidade, detalhe, COUNT(*) AS n FROM contatos_site
+                              WHERE origem = 'sabor' AND detalhe != '' AND criado_em >= datetime('now', ?) GROUP BY 1, 2 ORDER BY n DESC`).all(desde);
+  const clientes = db.prepare(`SELECT unidade, SUM(status = 'ativo') AS ativos, SUM(status = 'lead') AS interessados,
+                                      SUM(origem = 'site' AND criado_em >= datetime('now', ?)) AS novosSite
+                               FROM clientes GROUP BY unidade`).all(desde);
+  const vendas = db.prepare(`SELECT c.unidade, COUNT(*) AS pedidos, COALESCE(SUM(${UNIDADES_PEDIDO}), 0) AS saquinhos, COALESCE(SUM(${TOTAL_PEDIDO}), 0) AS total,
+                                    COUNT(DISTINCT c.id) AS compradores
+                             FROM pedidos p JOIN clientes c ON c.id = p.cliente_id
+                             WHERE p.status IN ('confirmado', 'entregue') AND p.criado_em >= datetime('now', ?) GROUP BY c.unidade`).all(desde);
+  const abertos = db.prepare(`SELECT c.unidade, COUNT(*) AS n FROM pedidos p JOIN clientes c ON c.id = p.cliente_id
+                              WHERE p.status IN ('novo', 'confirmado') GROUP BY c.unidade`).all();
+  return UNIDADES.map((u) => {
+    const meus = contatos.filter((c) => c.unidade === u.id);
+    const cl = clientes.find((c) => c.unidade === u.id) || {};
+    const v = vendas.find((x) => x.unidade === u.id) || {};
+    return {
+      ...u,
+      contatos: { n: meus.reduce((s, c) => s + c.n, 0), porOrigem: meus.map(({ origem, n }) => ({ origem, n })).sort((a, b) => b.n - a.n) },
+      sabores: sabores.filter((s) => s.unidade === u.id).slice(0, 5).map(({ detalhe, n }) => ({ sabor: detalhe, n })),
+      clientes: { ativos: cl.ativos || 0, interessados: cl.interessados || 0, novosSite: cl.novosSite || 0 },
+      vendas: { pedidos: v.pedidos || 0, saquinhos: v.saquinhos || 0, compradores: v.compradores || 0, total: v.total || 0 },
+      abertos: (abertos.find((a) => a.unidade === u.id) || {}).n || 0,
+    };
+  });
+}
+
 function movimentar(db, produtoId, tipo, qtd, motivo, pedidoId = null) {
   db.prepare('UPDATE produtos SET estoque = estoque + ? WHERE id = ?').run(qtd, produtoId);
   db.prepare('INSERT INTO movimentos (produto_id, tipo, quantidade, motivo, pedido_id) VALUES (?, ?, ?, ?, ?)').run(produtoId, tipo, qtd, motivo, pedidoId);
@@ -192,7 +225,7 @@ const rotas = [
   // o painel pergunta de minuto em minuto: aparece aviso quando chega interessado novo pelo site
   ['GET', /^\/api\/novidades$/, ({ db }) => ({
     leads: db.prepare("SELECT COUNT(*) AS n FROM clientes WHERE status = 'lead'").get().n,
-    ultimoLead: db.prepare("SELECT id, nome, estabelecimento, cidade FROM clientes WHERE origem = 'site' ORDER BY id DESC LIMIT 1").get() || null,
+    ultimoLead: db.prepare("SELECT id, nome, estabelecimento, cidade, unidade FROM clientes WHERE origem = 'site' ORDER BY id DESC LIMIT 1").get() || null,
   })],
 
   ['GET', /^\/api\/resumo$/, ({ db }) => {
@@ -224,6 +257,7 @@ const rotas = [
     return {
       ...insights,
       cidades,
+      porUnidade: porUnidade(db, 30),
       estoqueTotal: produtos.reduce((s, p) => s + p.estoque, 0),
       estoqueBaixo: produtos.filter((p) => p.estoque <= p.estoque_minimo),
       produtos, mes, receber, abertos, leads, vendas, ultimos, entregas, hoje: hojeLocal(),
@@ -281,19 +315,20 @@ const rotas = [
   ['GET', /^\/api\/clientes$/, ({ db, query }) => {
     const busca = `%${txt(query.get('busca'), 60)}%`;
     const status = query.get('status');
+    const unidade = unidadeValida(query.get('unidade'), null);
     const cfg = config(db);
     return db.prepare(`SELECT * FROM clientes WHERE (nome LIKE ? OR estabelecimento LIKE ? OR cidade LIKE ? OR telefone LIKE ?)
-                       ${status ? 'AND status = ?' : ''} ORDER BY status = 'lead' DESC, nome`)
-      .all(busca, busca, busca, busca, ...(status ? [status] : []))
+                       ${status ? 'AND status = ?' : ''} ${unidade ? 'AND unidade = ?' : ''} ORDER BY status = 'lead' DESC, nome`)
+      .all(busca, busca, busca, busca, ...(status ? [status] : []), ...(unidade ? [unidade] : []))
       .map((c) => clienteComPrevisao(db, c, cfg));
   }],
   ['POST', /^\/api\/clientes$/, ({ db, corpo }) => {
     if (!txt(corpo.nome)) throw erro(400, 'Informe o nome');
-    const r = db.prepare(`INSERT INTO clientes (nome, estabelecimento, tipo, cidade, telefone, observacoes, status, ciclo_dias)
-                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    const r = db.prepare(`INSERT INTO clientes (nome, estabelecimento, tipo, cidade, telefone, observacoes, status, ciclo_dias, unidade)
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
       txt(corpo.nome, 80), txt(corpo.estabelecimento, 120), txt(corpo.tipo, 40) || 'Casa de bebidas', txt(corpo.cidade, 80),
       fone(corpo.telefone), txt(corpo.observacoes, 1000), ['lead', 'ativo', 'inativo'].includes(corpo.status) ? corpo.status : 'ativo',
-      corpo.ciclo_dias ? inteiro(corpo.ciclo_dias, 1) : null);
+      corpo.ciclo_dias ? inteiro(corpo.ciclo_dias, 1) : null, unidadeValida(corpo.unidade));
     return { http: 201, corpo: db.prepare('SELECT * FROM clientes WHERE id = ?').get(r.lastInsertRowid) };
   }],
   ['GET', /^\/api\/clientes\/(\d+)$/, ({ db, params }) => {
@@ -312,9 +347,9 @@ const rotas = [
     const c = db.prepare('SELECT * FROM clientes WHERE id = ?').get(+params[0]);
     if (!c) throw erro(404, 'Cliente não encontrado');
     const v = { ...c, ...corpo };
-    db.prepare(`UPDATE clientes SET nome = ?, estabelecimento = ?, tipo = ?, cidade = ?, telefone = ?, observacoes = ?, status = ?, ciclo_dias = ? WHERE id = ?`).run(
+    db.prepare(`UPDATE clientes SET nome = ?, estabelecimento = ?, tipo = ?, cidade = ?, telefone = ?, observacoes = ?, status = ?, ciclo_dias = ?, unidade = ? WHERE id = ?`).run(
       txt(v.nome, 80) || c.nome, txt(v.estabelecimento, 120), txt(v.tipo, 40), txt(v.cidade, 80), fone(v.telefone), txt(v.observacoes, 1000),
-      ['lead', 'ativo', 'inativo'].includes(v.status) ? v.status : c.status, v.ciclo_dias ? inteiro(v.ciclo_dias, 1) : null, c.id);
+      ['lead', 'ativo', 'inativo'].includes(v.status) ? v.status : c.status, v.ciclo_dias ? inteiro(v.ciclo_dias, 1) : null, unidadeValida(v.unidade, c.unidade), c.id);
     return db.prepare('SELECT * FROM clientes WHERE id = ?').get(c.id);
   }],
   ['DELETE', /^\/api\/clientes\/(\d+)$/, ({ db, params }) => {
@@ -330,10 +365,12 @@ const rotas = [
     if (query.get('status')) { filtros.push('p.status = ?'); args.push(query.get('status')); }
     if (query.get('cliente')) { filtros.push('p.cliente_id = ?'); args.push(+query.get('cliente')); }
     if (query.get('pago') === '0') filtros.push("p.pago = 0 AND p.status != 'cancelado'");
+    const unidade = unidadeValida(query.get('unidade'), null);
+    if (unidade) { filtros.push('c.unidade = ?'); args.push(unidade); }
     // a entregar: ainda não entregues, pelo dia marcado (sem data vão para o fim) e pela cidade
     const entregar = query.get('entregar') === '1';
     if (entregar) filtros.push("p.status IN ('novo', 'confirmado')");
-    return db.prepare(`SELECT p.*, c.nome AS cliente_nome, c.estabelecimento, c.telefone, c.cidade, ${TOTAL_PEDIDO} AS total, ${UNIDADES_PEDIDO} AS unidades,
+    return db.prepare(`SELECT p.*, c.nome AS cliente_nome, c.estabelecimento, c.telefone, c.cidade, c.unidade, ${TOTAL_PEDIDO} AS total, ${UNIDADES_PEDIDO} AS unidades,
                               ${RECEBIDO_PEDIDO} AS recebido
                        FROM pedidos p JOIN clientes c ON c.id = p.cliente_id ${filtros.length ? 'WHERE ' + filtros.join(' AND ') : ''}
                        ORDER BY ${entregar ? 'p.entrega_em IS NULL, p.entrega_em, c.cidade, p.id' : 'p.id DESC'} LIMIT 200`).all(...args);
@@ -452,6 +489,15 @@ const rotas = [
     // senha trocada: derruba as outras sessões (se alguém tinha entrado com a senha antiga, sai agora)
     db.prepare('DELETE FROM sessoes WHERE usuario_id = ? AND token_hash != ?').run(u.id, usuario.token_hash);
     return { ok: true };
+  }],
+
+  // ---------- unidades: o que cada uma está atendendo ----------
+  ['GET', /^\/api\/unidades$/, ({ db, query }) => {
+    const dias = [7, 30, 90].includes(+query.get('dias')) ? +query.get('dias') : 30;
+    const ultimos = db.prepare('SELECT id, unidade, origem, detalhe, criado_em FROM contatos_site ORDER BY id DESC LIMIT 30').all();
+    const interessados = db.prepare(`SELECT id, nome, estabelecimento, cidade, unidade, criado_em FROM clientes
+                                     WHERE status = 'lead' ORDER BY id DESC LIMIT 12`).all();
+    return { dias, lista: porUnidade(db, dias), ultimos, interessados };
   }],
 
   // ---------- financeiro: vendas, recebido, despesas e lucro do mês ----------

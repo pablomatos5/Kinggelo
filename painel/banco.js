@@ -15,6 +15,12 @@ const SABORES = [
   ['frutas', 'Frutas Vermelhas', '#6a2c91'],
 ];
 
+// unidades que atendem pelo WhatsApp: o cliente do site escolhe a mais perto
+const UNIDADES = [
+  { id: 'cameta', nome: 'Cametá', fone: '5591993561705' },
+  { id: 'tucurui', nome: 'Tucuruí', fone: '5594984385947' },
+];
+
 const caminhoBanco = () => process.env.KG_BANCO || path.join(__dirname, 'dados', 'kinggelo.db');
 
 function abrirBanco(arquivo = caminhoBanco()) {
@@ -114,6 +120,15 @@ function abrirBanco(arquivo = caminhoBanco()) {
       data TEXT NOT NULL,                         -- AAAA-MM-DD
       criado_em TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    -- cada toque num botão de WhatsApp do site (qual unidade e de onde veio): mostra que unidade está sendo procurada
+    CREATE TABLE IF NOT EXISTS contatos_site (
+      id INTEGER PRIMARY KEY,
+      unidade TEXT NOT NULL,
+      origem TEXT NOT NULL,                       -- revender | sabor | pedido | entrega | aparecer | formulario | contato
+      detalhe TEXT NOT NULL DEFAULT '',           -- o sabor, quando veio de um card de sabor
+      criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_contatos_data ON contatos_site(criado_em);
     CREATE INDEX IF NOT EXISTS idx_pagamentos_pedido ON pagamentos(pedido_id);
     CREATE INDEX IF NOT EXISTS idx_despesas_data ON despesas(data);
     CREATE INDEX IF NOT EXISTS idx_pedidos_cliente ON pedidos(cliente_id, criado_em);
@@ -128,6 +143,11 @@ function abrirBanco(arquivo = caminhoBanco()) {
   if (!temColuna('sessoes', 'lembrar')) db.exec('ALTER TABLE sessoes ADD COLUMN lembrar INTEGER NOT NULL DEFAULT 1');
   if (!temColuna('pedidos', 'entrega_em')) db.exec('ALTER TABLE pedidos ADD COLUMN entrega_em TEXT');              // dia marcado (AAAA-MM-DD)
   db.exec('CREATE INDEX IF NOT EXISTS idx_pedidos_entrega ON pedidos(status, entrega_em)');
+  if (!temColuna('clientes', 'unidade')) {
+    // clientes de antes: quem é de Tucuruí fica com Tucuruí, o resto com a matriz
+    db.exec("ALTER TABLE clientes ADD COLUMN unidade TEXT NOT NULL DEFAULT 'cameta'");
+    db.exec("UPDATE clientes SET unidade = 'tucurui' WHERE lower(cidade) LIKE '%tucuru%'");
+  }
 
   const inserir = db.prepare('INSERT OR IGNORE INTO produtos (slug, nome, cor) VALUES (?, ?, ?)');
   for (const [slug, nome, cor] of SABORES) inserir.run(slug, nome, cor);
@@ -164,4 +184,4 @@ function transacao(db, fn) {
   }
 }
 
-module.exports = { abrirBanco, transacao, SABORES, caminhoBanco };
+module.exports = { abrirBanco, transacao, SABORES, UNIDADES, caminhoBanco };

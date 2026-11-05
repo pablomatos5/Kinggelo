@@ -6,7 +6,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
-const { abrirBanco } = require('./banco');
+const { abrirBanco, transacao, UNIDADES } = require('./banco');
+const UNIDADE_IDS = new Set(UNIDADES.map((u) => u.id));
+const NOME_UNIDADE = Object.fromEntries(UNIDADES.map((u) => [u.id, u.nome]));
+const ORIGENS_CONTATO = new Set(['revender', 'sabor', 'pedido', 'entrega', 'aparecer', 'contato']);
 const { rotas, semDinheiro } = require('./api');
 const backup = require('./backup');
 
@@ -220,9 +223,22 @@ const servidor = http.createServer(async (req, res) => {
         if (String(d.site || '').trim() || (d.tempo != null && Number(d.tempo) < 2000)) return json(res, 201, { ok: true });
         const txt = (v, n) => String(v || '').trim().slice(0, n);
         if (!txt(d.nome, 80) || !txt(d.ponto, 120)) return json(res, 400, { erro: 'Nome e estabelecimento são obrigatórios' });
-        db.prepare(`INSERT INTO clientes (nome, estabelecimento, tipo, cidade, telefone, status, origem, volume_informado)
-                    VALUES (?, ?, ?, ?, ?, 'lead', 'site', ?)`)
-          .run(txt(d.nome, 80), txt(d.ponto, 120), txt(d.tipo, 40) || 'Outro', txt(d.cidade, 80), txt(d.telefone, 20).replace(/\D/g, ''), txt(d.volume, 40));
+        const unidade = UNIDADE_IDS.has(d.unidade) ? d.unidade : 'cameta';
+        transacao(db, () => {
+          db.prepare(`INSERT INTO clientes (nome, estabelecimento, tipo, cidade, telefone, status, origem, volume_informado, unidade)
+                      VALUES (?, ?, ?, ?, ?, 'lead', 'site', ?, ?)`)
+            .run(txt(d.nome, 80), txt(d.ponto, 120), txt(d.tipo, 40) || 'Outro', txt(d.cidade, 80), txt(d.telefone, 20).replace(/\D/g, ''), txt(d.volume, 40), unidade);
+          db.prepare("INSERT INTO contatos_site (unidade, origem) VALUES (?, 'formulario')").run(unidade);
+        });
+        return json(res, 201, { ok: true });
+      }
+      // toque num botão de WhatsApp do site: conta para a unidade escolhida (sem dado pessoal nenhum)
+      if (caminho === '/api/publico/contato' && metodo === 'POST') {
+        if (limitar('contato:' + ip, 30, 60 * 60000)) return json(res, 202, { ok: true });
+        const d = await lerCorpo(req, 1024);
+        if (!UNIDADE_IDS.has(d.unidade) || !ORIGENS_CONTATO.has(d.origem)) return json(res, 400, { erro: 'Contato inválido' });
+        db.prepare('INSERT INTO contatos_site (unidade, origem, detalhe) VALUES (?, ?, ?)')
+          .run(d.unidade, d.origem, String(d.detalhe || '').trim().slice(0, 40));
         return json(res, 201, { ok: true });
       }
 
@@ -250,7 +266,7 @@ const servidor = http.createServer(async (req, res) => {
       }
       if (metodo === 'GET' && caminho === '/api/exportar/pedidos.csv') {
         const linhas = db.prepare(`
-          SELECT p.id, p.criado_em, p.entrega_em, p.status, p.pagamento, p.pago, c.estabelecimento, c.nome, c.cidade, c.telefone,
+          SELECT p.id, p.criado_em, p.entrega_em, p.status, p.pagamento, p.pago, c.estabelecimento, c.nome, c.cidade, c.telefone, c.unidade,
                  (SELECT COALESCE(SUM(valor), 0) FROM pagamentos WHERE pedido_id = p.id) AS recebido,
                  pr.nome AS sabor, i.quantidade, i.preco_unit
           FROM pedidos p JOIN clientes c ON c.id = p.cliente_id
@@ -265,8 +281,8 @@ const servidor = http.createServer(async (req, res) => {
         };
         const valor = (c) => (c / 100).toFixed(2).replace('.', ',');
         // "Recebido no pedido" se repete em cada sabor do mesmo pedido (é do pedido todo, não da linha)
-        const csv = ['Pedido;Data;Entrega marcada;Situação;Pagamento;Pago;Recebido no pedido;Estabelecimento;Responsável;Cidade;WhatsApp;Sabor;Quantidade;Preço unitário;Total']
-          .concat(linhas.map((l) => [l.id, l.criado_em, l.entrega_em || '', l.status, l.pagamento, l.pago ? 'sim' : 'não', valor(l.recebido), l.estabelecimento, l.nome, l.cidade, l.telefone,
+        const csv = ['Pedido;Data;Entrega marcada;Situação;Pagamento;Pago;Recebido no pedido;Unidade;Estabelecimento;Responsável;Cidade;WhatsApp;Sabor;Quantidade;Preço unitário;Total']
+          .concat(linhas.map((l) => [l.id, l.criado_em, l.entrega_em || '', l.status, l.pagamento, l.pago ? 'sim' : 'não', valor(l.recebido), NOME_UNIDADE[l.unidade] || l.unidade, l.estabelecimento, l.nome, l.cidade, l.telefone,
             l.sabor, l.quantidade, valor(l.preco_unit), valor(l.quantidade * l.preco_unit)].map(cel).join(';'))).join('\r\n');
         res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="pedidos-kinggelo-${new Date().toISOString().slice(0, 10)}.csv"`, 'Cache-Control': 'no-store' });
         return res.end('\ufeff' + csv);

@@ -57,6 +57,14 @@
   const STATUS = { novo: 'Novo', confirmado: 'Confirmado', entregue: 'Entregue', cancelado: 'Cancelado' };
   const NIVEL = { acabando: 'Acabando', atencao: 'Atenção', ok: 'Em dia', 'sem-pedidos': 'Sem pedidos' };
   const TIPOS = ['Casa de bebidas', 'Mercado / supermercado', 'Distribuidora', 'Bar / restaurante', 'Outro'];
+  // unidades que atendem pelo WhatsApp (o cliente do site escolhe a mais perto)
+  const UNIDADES = [['cameta', 'Cametá'], ['tucurui', 'Tucuruí']];
+  const nomeUnidade = (u) => (UNIDADES.find(([k]) => k === u) || [, u || 'Cametá'])[1];
+  const COR_UNIDADE = { cameta: 'var(--azul)', tucurui: '#e8771a' };
+  // de onde veio o toque no WhatsApp do site
+  const ORIGEM = { revender: 'Quero revender', sabor: 'Pediu um sabor', pedido: 'Quero fazer pedido', entrega: 'Entrega na cidade',
+    aparecer: 'Aparecer no site', formulario: 'Formulário de revenda', contato: 'Número direto' };
+  const tagUnidade = (u) => `<span class="tag unidade-tag" style="--cor:${COR_UNIDADE[u] || 'var(--azul)'}">${esc(nomeUnidade(u))}</span>`;
 
   const ICONES = {
     inicio: '<path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
@@ -67,6 +75,7 @@
     ajustes: '<path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm9 4.7v-2.4l-2.4-.6-.6-1.5 1.3-2.1-1.7-1.7-2.1 1.3-1.5-.6L13.4 3h-2.4l-.6 2.4-1.5.6-2.1-1.3-1.7 1.7 1.3 2.1-.6 1.5L3 10.8v2.4l2.4.6.6 1.5-1.3 2.1 1.7 1.7 2.1-1.3 1.5.6.6 2.4h2.4l.6-2.4 1.5-.6 2.1 1.3 1.7-1.7-1.3-2.1.6-1.5z"/>',
     zap: '<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.4.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.6 1.1 2.7c.1.2 1.9 2.9 4.6 4 1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.8-1.2.2-.6.2-1.1.1-1.2l-.4-.2Z"/>',
     mais: '<path d="M11 4h2v16h-2z"/><path d="M4 11h16v2H4z"/>',
+    unidades: '<path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/>',
     sair: '<path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5v-2H6V6h4z"/><path d="m15 7-1.4 1.4 2.6 2.6H9v2h7.2l-2.6 2.6L15 17l5-5z"/>',
     financeiro: '<path d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 7.5v9M14.5 9.5c-.6-.7-1.5-1-2.5-1-1.4 0-2.5.7-2.5 1.8 0 2.6 5 1.4 5 4 0 1.1-1.1 1.9-2.5 1.9-1.1 0-2-.4-2.6-1.1" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
   };
@@ -138,7 +147,7 @@
   }
 
   // ---------- casca (menus) ----------
-  const MENU = [['inicio', 'Início'], ['pedidos', 'Pedidos'], ['clientes', 'Clientes'], ['estoque', 'Estoque'], ['avisos', 'Avisos'], ['financeiro', 'Financeiro']];
+  const MENU = [['inicio', 'Início'], ['pedidos', 'Pedidos'], ['clientes', 'Clientes'], ['unidades', 'Unidades'], ['estoque', 'Estoque'], ['avisos', 'Avisos'], ['financeiro', 'Financeiro']];
   let principal;
   function montarCasca() {
     const itens = MENU.filter(([k]) => k !== 'financeiro' || ehDono());
@@ -309,6 +318,15 @@
             })).join('')}</div>` : '<div class="vazio"><strong>Nenhum interessado parado</strong>Todo mundo que se cadastrou já foi atendido.</div>'}
         </section>
         <section class="cartao">
+          <h2>Unidades (30 dias) <a href="#/unidades">ver detalhes</a></h2>
+          <div class="lista">${r.porUnidade.map((u) => `
+            <a class="linha-item" href="#/unidades">
+              <span class="avatar" style="background:${COR_UNIDADE[u.id]}">${iniciais(u.nome)}</span>
+              <span><span class="titulo">${esc(u.nome)}</span><br><span class="meta">${pl(u.contatos.n, 'contato', 'contatos')} pelo site · ${pl(u.clientes.novosSite, 'interessado novo', 'interessados novos')}</span></span>
+              <span class="dir"><span class="meta">${pl(u.vendas.pedidos, 'pedido', 'pedidos')}${dono ? `<br><strong>${reais(u.vendas.total)}</strong>` : ''}</span></span>
+            </a>`).join('')}</div>
+        </section>
+        <section class="cartao">
           <h2>Mais vendidos (30 dias)</h2>
           <div class="barras-vendas">${r.vendas.map((v) => `
             <div class="linha"><span>${esc(v.nome)}</span><div class="barra" style="--cor:${esc(v.cor)}"><i style="width:${(v.unidades / maxVenda) * 100}%"></i></div><span>${v.unidades}</span></div>`).join('')}
@@ -369,8 +387,11 @@
   // ----- pedidos -----
   async function telaPedidos(q) {
     const filtro = q.get('f') || '';
-    const url = filtro === 'areceber' ? '/api/pedidos?pago=0' : filtro === 'entregar' ? '/api/pedidos?entregar=1' : filtro ? `/api/pedidos?status=${filtro}` : '/api/pedidos';
+    const un = q.get('u') || '';
+    const url = (filtro === 'areceber' ? '/api/pedidos?pago=0' : filtro === 'entregar' ? '/api/pedidos?entregar=1' : filtro ? `/api/pedidos?status=${filtro}` : '/api/pedidos?')
+      + (un ? `&unidade=${un}` : '');
     const lista = await api('GET', url);
+    const linkPedidos = (f, u) => `#/pedidos?${new URLSearchParams({ ...(f ? { f } : {}), ...(u ? { u } : {}) })}`;
     const chips = [['', 'Todos'], ['entregar', 'Para entregar'], ['novo', 'Novos'], ['confirmado', 'Confirmados'], ['entregue', 'Entregues'], ['areceber', 'A receber'], ['cancelado', 'Cancelados']]
       .filter(([k]) => k !== 'areceber' || ehDono());
     let corpo;
@@ -390,7 +411,8 @@
     principal.innerHTML = `
       <div class="topo-pagina"><div><h1>Pedidos</h1><p class="sub">${pl(lista.length, 'pedido', 'pedidos')}</p></div>
         <a class="btn btn-azul" href="#/pedidos/novo">${ic('mais')} Novo pedido</a></div>
-      <div class="chips">${chips.map(([k, n]) => `<a class="chip" href="#/pedidos${k ? '?f=' + k : ''}" aria-pressed="${k === filtro}">${n}</a>`).join('')}</div>
+      <div class="chips">${chips.map(([k, n]) => `<a class="chip" href="${linkPedidos(k, un)}" aria-pressed="${k === filtro}">${n}</a>`).join('')}</div>
+      <div class="chips chips-unidade">${[['', 'Todas as unidades'], ...UNIDADES].map(([k, n]) => `<a class="chip" href="${linkPedidos(filtro, k)}" aria-pressed="${k === un}">${n}</a>`).join('')}</div>
       ${corpo}`;
     principal.querySelector('[data-imprimir]')?.addEventListener('click', () => print());
   }
@@ -589,23 +611,26 @@
   async function telaClientes(q) {
     const filtro = q.get('f') || '';
     const busca = q.get('b') || '';
-    const lista = await api('GET', `/api/clientes?busca=${encodeURIComponent(busca)}${filtro ? '&status=' + filtro : ''}`);
+    const un = q.get('u') || '';
+    const lista = await api('GET', `/api/clientes?busca=${encodeURIComponent(busca)}${filtro ? '&status=' + filtro : ''}${un ? '&unidade=' + un : ''}`);
+    const linkClientes = (f, u) => `#/clientes?f=${f}&u=${u}&b=${encodeURIComponent(busca)}`;
     const chips = [['', 'Todos'], ['ativo', 'Ativos'], ['lead', 'Interessados'], ['inativo', 'Inativos']];
     principal.innerHTML = `
       <div class="topo-pagina"><div><h1>Clientes</h1><p class="sub">Casas de bebidas, mercados e distribuidoras</p></div>
         <a class="btn btn-azul" href="#/clientes/novo">${ic('mais')} Novo cliente</a></div>
       <form class="busca" id="form-busca"><input name="b" type="search" placeholder="Buscar por nome, loja, cidade ou telefone" value="${esc(busca)}"><button class="btn btn-claro">Buscar</button></form>
-      <div class="chips">${chips.map(([k, n]) => `<a class="chip" href="#/clientes?f=${k}&b=${encodeURIComponent(busca)}" aria-pressed="${k === filtro}">${n}</a>`).join('')}</div>
+      <div class="chips">${chips.map(([k, n]) => `<a class="chip" href="${linkClientes(k, un)}" aria-pressed="${k === filtro}">${n}</a>`).join('')}</div>
+      <div class="chips chips-unidade">${[['', 'Todas as unidades'], ...UNIDADES].map(([k, n]) => `<a class="chip" href="${linkClientes(filtro, k)}" aria-pressed="${k === un}">${n}</a>`).join('')}</div>
       ${lista.length ? `<div class="lista">${lista.map((c) => `
         <a class="linha-item" href="#/clientes/${c.id}">
           <span class="avatar" style="background:${c.status === 'lead' ? '#8e44c9' : 'var(--azul)'}">${iniciais(c.estabelecimento || c.nome)}</span>
-          <span><span class="titulo">${esc(c.estabelecimento || c.nome)}</span><br><span class="meta">${esc(c.nome)} · ${esc(c.cidade)} · ${esc(c.tipo)}</span></span>
+          <span><span class="titulo">${esc(c.estabelecimento || c.nome)}</span><br><span class="meta">${esc(c.nome)} · ${esc(c.cidade)} · ${esc(c.tipo)} · ${esc(nomeUnidade(c.unidade))}</span></span>
           <span class="dir">${c.status !== 'ativo' ? `<span class="tag ${c.status}">${c.status === 'lead' ? 'Interessado' : 'Inativo'}</span>` : `<span class="tag ${c.previsao.nivel}">${NIVEL[c.previsao.nivel]}</span>`}
             ${c.previsao.porSemana ? `<br><span class="meta">~${c.previsao.porSemana}/semana</span>` : ''}</span>
         </a>`).join('')}</div>` : '<div class="cartao vazio"><strong>Nenhum cliente encontrado</strong>Cadastre ou ajuste a busca.</div>'}`;
     document.getElementById('form-busca').onsubmit = (e) => {
       e.preventDefault();
-      location.hash = `#/clientes?f=${filtro}&b=${encodeURIComponent(e.target.elements.b.value)}`;
+      location.hash = `#/clientes?f=${filtro}&u=${un}&b=${encodeURIComponent(e.target.elements.b.value)}`;
     };
   }
 
@@ -617,6 +642,7 @@
         <label class="campo">Tipo<select name="tipo">${TIPOS.map((t) => `<option ${t === c.tipo ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
         <label class="campo">Cidade<input name="cidade" value="${esc(c.cidade)}" placeholder="Cametá-PA"></label>
         <label class="campo">WhatsApp<input name="telefone" inputmode="tel" value="${esc(fone(c.telefone))}" placeholder="(91) 99999-9999"></label>
+        <label class="campo">Unidade que atende<select name="unidade">${UNIDADES.map(([k, n]) => `<option value="${k}" ${k === (c.unidade || 'cameta') ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
         <label class="campo">Situação<select name="status">${[['ativo', 'Ativo'], ['lead', 'Interessado'], ['inativo', 'Inativo']].map(([k, n]) => `<option value="${k}" ${k === (c.status || 'ativo') ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
         <label class="campo">Repõe a cada (dias)<input name="ciclo_dias" inputmode="numeric" value="${esc(c.ciclo_dias || '')}" placeholder="automático"><small>Opcional. Usado enquanto o cliente tem só 1 pedido.</small></label>
       </div>
@@ -624,7 +650,7 @@
   }
   const dadosCliente = (d) => ({
     nome: d.get('nome'), estabelecimento: d.get('estabelecimento'), tipo: d.get('tipo'), cidade: d.get('cidade'),
-    telefone: d.get('telefone'), status: d.get('status'), ciclo_dias: d.get('ciclo_dias') || null, observacoes: d.get('observacoes'),
+    telefone: d.get('telefone'), status: d.get('status'), unidade: d.get('unidade'), ciclo_dias: d.get('ciclo_dias') || null, observacoes: d.get('observacoes'),
   });
 
   function telaNovoCliente() {
@@ -647,7 +673,7 @@
     principal.innerHTML = `
       <a class="voltar" href="#/clientes">← Clientes</a>
       <div class="topo-pagina">
-        <div><h1>${esc(c.estabelecimento || c.nome)}</h1><p class="sub">${esc(c.nome)} · ${esc(c.tipo)} · ${esc(c.cidade)}${c.origem === 'site' ? ' · veio pelo site' : ''}</p></div>
+        <div><h1>${esc(c.estabelecimento || c.nome)}</h1><p class="sub">${esc(c.nome)} · ${esc(c.tipo)} · ${esc(c.cidade)} · unidade ${esc(nomeUnidade(c.unidade))}${c.origem === 'site' ? ' · veio pelo site' : ''}</p></div>
         <div class="acoes">
           ${c.whatsapp ? `<a class="btn btn-verde" href="${esc(c.whatsapp)}" target="_blank" rel="noopener" data-avisar>${ic('zap')} WhatsApp</a>` : ''}
           <a class="btn btn-azul" href="#/pedidos/novo?cliente=${c.id}">${ic('mais')} Novo pedido</a>
@@ -686,6 +712,64 @@
     if (pv.nivel === 'acabando' || pv.nivel === 'atencao') {
       principal.querySelector('[data-avisar]')?.addEventListener('click', () => api('POST', '/api/avisos', { cliente_id: c.id }).catch(() => {}));
     }
+  }
+
+  // ----- unidades: o que Cametá e Tucuruí estão atendendo -----
+  async function telaUnidades(q) {
+    const dias = [7, 30, 90].includes(+q.get('dias')) ? +q.get('dias') : 30;
+    const r = await api('GET', `/api/unidades?dias=${dias}`);
+    const dono = ehDono();
+    const maxContatos = Math.max(1, ...r.lista.map((u) => u.contatos.n));
+    const quandoCurto = (s) => new Date(s.replace(' ', 'T') + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const cartao = (u) => {
+      const maxOrigem = Math.max(1, ...u.contatos.porOrigem.map((o) => o.n));
+      return `
+      <section class="cartao cartao-unidade" style="--cor:${COR_UNIDADE[u.id]}">
+        <h2><span>${ic('unidades')} ${esc(u.nome)}</span><a href="https://wa.me/${esc(u.fone)}" target="_blank" rel="noopener">${ic('zap')} WhatsApp</a></h2>
+        <div class="numeros-unidade">
+          <div><strong>${u.contatos.n}</strong><span>${u.contatos.n === 1 ? 'contato' : 'contatos'} pelo site</span></div>
+          <div><strong>${u.clientes.novosSite}</strong><span>${u.clientes.novosSite === 1 ? 'interessado novo' : 'interessados novos'}</span></div>
+          <div><strong>${u.vendas.pedidos}</strong><span>${u.vendas.pedidos === 1 ? 'pedido' : 'pedidos'} · ${pl(u.vendas.saquinhos, 'saquinho', 'saquinhos')}</span></div>
+          ${dono ? `<div><strong>${reais(u.vendas.total)}</strong><span>vendido</span></div>` : `<div><strong>${u.abertos}</strong><span>${u.abertos === 1 ? 'pedido em aberto' : 'pedidos em aberto'}</span></div>`}
+        </div>
+        <div class="barra-unidade" title="Participação nos contatos pelo site"><i style="width:${(u.contatos.n / maxContatos) * 100}%"></i></div>
+        <h3 class="sub-titulo">De onde vieram os contatos</h3>
+        ${u.contatos.porOrigem.length ? `<div class="barras-vendas">${u.contatos.porOrigem.map((o) => `
+          <div class="linha"><span>${esc(ORIGEM[o.origem] || o.origem)}</span><div class="barra" style="--cor:${COR_UNIDADE[u.id]}"><i style="width:${(o.n / maxOrigem) * 100}%"></i></div><span>${o.n}</span></div>`).join('')}</div>`
+          : '<div class="vazio">Nenhum contato pelo site neste período.</div>'}
+        ${u.sabores.length ? `<p class="meta sabores-unidade">Sabores mais pedidos pelo site: ${u.sabores.map((s) => `<strong>${esc(s.sabor)}</strong> (${s.n})`).join(', ')}</p>` : ''}
+        <div class="acoes acoes-unidade">
+          <a class="btn btn-claro" href="#/clientes?f=ativo&u=${u.id}">${pl(u.clientes.ativos, 'cliente ativo', 'clientes ativos')}</a>
+          <a class="btn btn-claro" href="#/clientes?f=lead&u=${u.id}">${pl(u.clientes.interessados, 'interessado', 'interessados')}</a>
+          <a class="btn btn-claro" href="#/pedidos?u=${u.id}">Pedidos</a>
+        </div>
+      </section>`;
+    };
+    principal.innerHTML = `
+      <div class="topo-pagina"><div><h1>Unidades</h1><p class="sub">Quem procura Cametá e quem procura Tucuruí</p></div></div>
+      <div class="chips">${[7, 30, 90].map((d) => `<a class="chip" href="#/unidades?dias=${d}" aria-pressed="${d === dias}">${d} dias</a>`).join('')}</div>
+      <div class="grade grade-2">${r.lista.map(cartao).join('')}</div>
+      <div class="grade grade-2" style="margin-top:16px">
+        <section class="cartao">
+          <h2>Últimos contatos pelo site</h2>
+          <p class="meta cartao-sub">Cada toque num botão de WhatsApp do site, com a unidade que a pessoa escolheu.</p>
+          ${r.ultimos.length ? `<div class="lista">${r.ultimos.map((c) => `
+            <div class="linha-item">
+              <span class="avatar" style="background:${COR_UNIDADE[c.unidade] || 'var(--azul)'}">${iniciais(nomeUnidade(c.unidade))}</span>
+              <span><span class="titulo">${esc(ORIGEM[c.origem] || c.origem)}${c.detalhe ? ` · ${esc(c.detalhe)}` : ''}</span><br><span class="meta">${esc(quandoCurto(c.criado_em))}</span></span>
+              <span class="dir">${tagUnidade(c.unidade)}</span>
+            </div>`).join('')}</div>` : '<div class="vazio"><strong>Nenhum contato ainda</strong>Os toques nos botões de WhatsApp do site aparecem aqui.</div>'}
+        </section>
+        <section class="cartao">
+          <h2>Interessados esperando <a href="#/clientes?f=lead">ver todos</a></h2>
+          ${r.interessados.length ? `<div class="lista">${r.interessados.map((c) => `
+            <a class="linha-item" href="#/clientes/${c.id}">
+              <span class="avatar" style="background:#8e44c9">${iniciais(c.estabelecimento || c.nome)}</span>
+              <span><span class="titulo">${esc(c.estabelecimento || c.nome)}</span><br><span class="meta">${esc(c.cidade)}${c.cidade ? ' · ' : ''}${quando(c.criado_em)}</span></span>
+              <span class="dir">${tagUnidade(c.unidade)}</span>
+            </a>`).join('')}</div>` : '<div class="vazio"><strong>Ninguém esperando</strong>Todo interessado já foi atendido.</div>'}
+        </section>
+      </div>`;
   }
 
   // ----- estoque -----
@@ -978,7 +1062,7 @@
   // o painel pergunta ao servidor a cada minuto (e quando volta a ficar visível); o último já visto fica guardado no aparelho
   let usuarioAtual = '';
   function avisarNovoLead(l, teste = false) {
-    const corpo = `${l.estabelecimento || l.nome}${l.cidade ? ' · ' + l.cidade : ''}`;
+    const corpo = `${l.estabelecimento || l.nome}${l.cidade ? ' · ' + l.cidade : ''}${l.unidade ? ' · unidade ' + nomeUnidade(l.unidade) : ''}`;
     if (!teste) toast(`Novo interessado pelo site: ${corpo}`);
     if ('Notification' in window && Notification.permission === 'granted') {
       const op = { body: corpo, icon: '/admin/icones/icone-192.png', badge: '/admin/icones/icone-192.png', tag: 'lead-' + l.id, data: { url: l.id ? `/admin/#/clientes/${l.id}` : '/admin/' } };
@@ -1014,6 +1098,7 @@
       else if (secao === 'clientes' && sub === 'novo') telaNovoCliente();
       else if (secao === 'clientes' && sub) await telaCliente(+sub);
       else if (secao === 'clientes') await telaClientes(q);
+      else if (secao === 'unidades') await telaUnidades(q);
       else if (secao === 'estoque') await telaEstoque();
       else if (secao === 'avisos') await telaAvisos();
       else if (secao === 'ajustes') await telaAjustes();

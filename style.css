@@ -283,15 +283,6 @@ h1, h2, h3 { margin: 0; font-weight: 400; }
 .hero.trocando-sabor .brilho-palco { scale: 1.12; background: radial-gradient(closest-side, color-mix(in srgb, var(--gelo-meio) 55%, transparent), color-mix(in srgb, var(--gelo-claro) 18%, transparent) 55%, transparent); }
 /* arrastar para o lado gira o leque; a rolagem vertical continua normal */
 .hero-pacotes { touch-action: pan-y; }
-.dica-sabor {
-  position: absolute; left: 50%; top: 1.5%; z-index: 4; translate: -50% 0; margin: 0;
-  padding: .5em 1.1em; border-radius: 999px; white-space: nowrap; pointer-events: none;
-  background: rgba(11, 42, 94, .72); color: #fff; font-weight: 700; font-size: .85rem;
-  transition: opacity .4s;
-}
-.dica-dedo { display: inline-block; animation: dedo 1.6s ease-in-out infinite; }
-@keyframes dedo { 50% { translate: 0 -4px; } }
-.hero.rolou .dica-sabor { opacity: 0; }
 @keyframes leque-flutua { 50% { translate: -50% -7px; } }
 .pacote-centro {
   /* alto o bastante para o gelo pendurado na boca aparecer inteiro na tela */
@@ -559,6 +550,7 @@ main { position: relative; }
   padding: .85em 1em; border-radius: 14px; border: 2px solid transparent;
   background: rgba(255, 255, 255, .92);
   transition: border-color .2s, box-shadow .2s;
+  width: 100%; min-width: 0;
 }
 .form-revenda input:focus, .form-revenda select:focus { outline: none; border-color: var(--marinho); box-shadow: 0 0 0 4px rgba(11, 42, 94, .2); }
 .form-revenda button { justify-self: start; cursor: pointer; border: 0; }
@@ -716,7 +708,7 @@ main { position: relative; }
   :root { --topo-h: 64px; }
   .menu { display: none; }
   .logo-svg { height: 54px; }
-  .duo { grid-template-columns: 1fr; }
+  .duo { grid-template-columns: minmax(0, 1fr); }
   .duo-trilho { display: none; }
   /* faixa livre à direita para o gelo descer no celular */
   .secao:not(.contato) { padding-right: 60px; }
@@ -734,7 +726,6 @@ main { position: relative; }
   .pacote-centro { height: 72%; bottom: 17%; }
   .leque { height: calc(min(48%, 36vw) * var(--leque-escala, 1)); }
   /* no celular a dica fica acima do leque (embaixo o botão do WhatsApp cobria) */
-  .dica-sabor { top: 2%; font-size: .78rem; }
   /* tablet: duas colunas; celular (≤520px) volta para uma */
   .sabores, .galeria { grid-template-columns: repeat(2, 1fr); }
   .galeria .galeria-destaque { grid-row: span 1; aspect-ratio: 4 / 5; }
@@ -755,7 +746,7 @@ main { position: relative; }
 @media (prefers-reduced-motion: reduce) {
   .revela, .palavra > span { transition: none; opacity: 1; transform: none; }
   .sabor-pacote, .sabor-bolhas i, .sabor-onda, .kit-pacotes, .leque, .raios, .hero-frase span::after { animation: none; }
-  .leque.trocou, .pacote-centro.trocou, .dica-dedo { animation: none !important; }
+  .leque.trocou, .pacote-centro.trocou { animation: none !important; }
   .hero-bolhas { display: none; }
   .faixa-trilho { animation: none; }
   html { scroll-behavior: auto; }
@@ -879,3 +870,49 @@ main { position: relative; }
 .ponto-mapa::before { inset: -9px -3px; }
 .ponto-rede::before { inset: -8px -3px; }
 .rodape-links a::before, .koraki-mark::before { inset: -10px -6px; }
+
+/* ---------- janela "qual unidade fica mais perto?" (botões de WhatsApp) ---------- */
+.escolha-unidade {
+  width: min(100% - 32px, 520px); max-height: calc(100svh - 32px); overflow: auto;
+  padding: 2rem 1.6rem 1.4rem; border: 0; border-radius: var(--raio);
+  background: var(--marinho); color: #fff;
+  box-shadow: 0 12px 0 #061a3d, 0 40px 80px -20px rgba(0, 0, 0, .6);
+}
+.escolha-unidade::backdrop { background: rgba(5, 20, 50, .62); backdrop-filter: blur(3px); }
+.escolha-unidade[open] { animation: escolha-entra .28s cubic-bezier(.2, .8, .2, 1); }
+@keyframes escolha-entra { from { opacity: 0; translate: 0 24px; } }
+.escolha-unidade h2 { font-family: var(--display); font-size: clamp(1.7rem, 5.5vw, 2.3rem); line-height: 1.05; text-transform: uppercase; margin: 0 2.4rem 1.2rem 0; }
+.escolha-sobre { margin: 0 0 .4rem; font-weight: 800; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ouro); }
+.escolha-fechar {
+  position: absolute; right: .9rem; top: .9rem; width: 44px; height: 44px; border: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, .12); color: #fff; font-size: 1.6rem; line-height: 1; cursor: pointer;
+}
+.escolha-fechar:hover { background: rgba(255, 255, 255, .22); }
+.escolha-opcoes { display: grid; gap: .8rem; }
+.escolha {
+  position: relative; display: grid; grid-template-columns: auto 1fr; gap: .2rem 1rem; align-items: center;
+  padding: 1.1rem 1.2rem; border-radius: 20px; text-decoration: none;
+  background: rgba(255, 255, 255, .07); border: 2px solid rgba(255, 255, 255, .16);
+  transition: background .15s, border-color .15s, transform .15s;
+}
+.escolha:hover, .escolha:focus-visible { background: rgba(245, 197, 24, .12); border-color: var(--ouro); transform: translateY(-2px); }
+.escolha.ultima { border-color: var(--ouro); }
+.escolha-pino {
+  grid-row: span 2; position: relative; width: 24px; height: 24px; margin: 0 .2rem;
+  border-radius: 50% 50% 50% 0; rotate: -45deg; background: var(--ouro); box-shadow: 0 0 0 6px rgba(245, 197, 24, .18);
+}
+.escolha-pino::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--marinho); }
+.escolha-texto strong { display: block; font-family: var(--display); font-weight: 400; font-size: 1.6rem; line-height: 1.1; text-transform: uppercase; }
+.escolha-texto small { display: block; font-size: .9rem; color: #c9d3e6; line-height: 1.35; }
+.escolha-fone { grid-column: 2; display: inline-flex; align-items: center; gap: .45em; justify-self: start; margin-top: .45rem; padding: .45em .95em; border-radius: 999px; background: #25d366; color: #fff; font-weight: 800; font-size: .95rem; }
+.escolha-ultima { display: none; position: absolute; right: 1rem; top: 1rem; padding: .2em .65em; border-radius: 999px; background: var(--ouro); color: var(--noite); font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.escolha.ultima .escolha-ultima { display: block; }
+.escolha-nota { margin: 1rem 0 0; font-size: .88rem; color: #c9d3e6; }
+@media (max-width: 520px) {
+  /* no celular vira uma folha que sobe da parte de baixo, perto do polegar */
+  .escolha-unidade { margin: auto auto 0; width: 100%; max-width: none; max-height: 92svh; border-radius: var(--raio) var(--raio) 0 0; padding: 1.6rem 16px calc(1.2rem + env(safe-area-inset-bottom)); box-shadow: 0 -20px 60px -20px rgba(0, 0, 0, .6); }
+  .escolha-unidade h2 { font-size: 1.65rem; }
+  .escolha-ultima { position: static; justify-self: start; grid-column: 2; margin-top: .3rem; }
+  .escolha.ultima .escolha-ultima { display: inline-block; }
+}
+@media (prefers-reduced-motion: reduce) { .escolha-unidade[open] { animation: none; } .escolha:hover { transform: none; } }

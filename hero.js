@@ -106,7 +106,7 @@
     // apertado, o topo cede um pouco para baixo
     const ox = W * 0.8, oy = Hs * (0.04 + 0.025 * sq * (1 - murcha));
     // a pressão pulsa, como mãos apertando em tempos
-    const pulso = reduzido ? 0 : Math.max(0, Math.sin(t * 0.009)) * 0.35 * pressao;
+    const pulso = reduzido ? 0 : Math.max(0, Math.sin(t * 0.0115)) * 0.35 * pressao;
     const pr = Math.min(1, pressao + pulso);
     const esticaY = 1 + 0.03 * pr - 0.02 * murcha;
     const corpoH = Hs * CORTE * esticaY;
@@ -373,7 +373,7 @@
   // ---------- laço principal ----------
   let suaveY = scrollY, ultimo = performance.now(), ultimoScroll = scrollY, velocidade = 0;
   let inicioSeq = null;
-  const DUR_SEQ = 2300, FIM_SEQ = 0.74;
+  const DUR_SEQ = 1700, FIM_SEQ = 0.74;  // espremer → estufar → soltar, em 1,7 s
   let pAnterior = 0, kkAnterior = 0, ultimoTremor = null, ultimaAbertura = null, copoVisivel = null, telaLimpa = false;
   window.__gelo = { visivel: false };
 
