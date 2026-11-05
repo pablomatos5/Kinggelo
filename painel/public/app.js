@@ -412,7 +412,7 @@
       <div class="topo-pagina"><div><h1>Pedidos</h1><p class="sub">${pl(lista.length, 'pedido', 'pedidos')}</p></div>
         <a class="btn btn-azul" href="#/pedidos/novo">${ic('mais')} Novo pedido</a></div>
       <div class="chips">${chips.map(([k, n]) => `<a class="chip" href="${linkPedidos(k, un)}" aria-pressed="${k === filtro}">${n}</a>`).join('')}</div>
-      <div class="chips chips-unidade">${[['', 'Todas as unidades'], ...UNIDADES].map(([k, n]) => `<a class="chip" href="${linkPedidos(filtro, k)}" aria-pressed="${k === un}">${n}</a>`).join('')}</div>
+      <div class="chips chips-unidade">${[['', 'Todas'], ...UNIDADES].map(([k, n]) => `<a class="chip" href="${linkPedidos(filtro, k)}" aria-pressed="${k === un}">${n}</a>`).join('')}</div>
       ${corpo}`;
     principal.querySelector('[data-imprimir]')?.addEventListener('click', () => print());
   }
@@ -618,9 +618,9 @@
     principal.innerHTML = `
       <div class="topo-pagina"><div><h1>Clientes</h1><p class="sub">Casas de bebidas, mercados e distribuidoras</p></div>
         <a class="btn btn-azul" href="#/clientes/novo">${ic('mais')} Novo cliente</a></div>
-      <form class="busca" id="form-busca"><input name="b" type="search" placeholder="Buscar por nome, loja, cidade ou telefone" value="${esc(busca)}"><button class="btn btn-claro">Buscar</button></form>
+      <form class="busca" id="form-busca"><input name="b" type="search" placeholder="Nome, loja, cidade ou telefone" value="${esc(busca)}"><button class="btn btn-claro">Buscar</button></form>
       <div class="chips">${chips.map(([k, n]) => `<a class="chip" href="${linkClientes(k, un)}" aria-pressed="${k === filtro}">${n}</a>`).join('')}</div>
-      <div class="chips chips-unidade">${[['', 'Todas as unidades'], ...UNIDADES].map(([k, n]) => `<a class="chip" href="${linkClientes(filtro, k)}" aria-pressed="${k === un}">${n}</a>`).join('')}</div>
+      <div class="chips chips-unidade">${[['', 'Todas'], ...UNIDADES].map(([k, n]) => `<a class="chip" href="${linkClientes(filtro, k)}" aria-pressed="${k === un}">${n}</a>`).join('')}</div>
       ${lista.length ? `<div class="lista">${lista.map((c) => `
         <a class="linha-item" href="#/clientes/${c.id}">
           <span class="avatar" style="background:${c.status === 'lead' ? '#8e44c9' : 'var(--azul)'}">${iniciais(c.estabelecimento || c.nome)}</span>
@@ -1105,6 +1105,11 @@
       else if (secao === 'financeiro' && ehDono()) await telaFinanceiro(q);
       else await telaInicio();
       scrollTo(0, 0);
+      // celular: os filtros ficam numa linha que desliza; o filtro escolhido aparece sem precisar procurar
+      principal.querySelectorAll('.chips').forEach((linha) => {
+        const ativo = linha.querySelector('[aria-pressed="true"]');
+        if (ativo && linha.scrollWidth > linha.clientWidth) linha.scrollLeft = ativo.offsetLeft - linha.offsetLeft - 16;
+      });
     } catch (err) {
       if (err.message !== 'Faça login') principal.innerHTML = `<div class="cartao vazio"><strong>Não deu para carregar</strong>${esc(err.message)}</div>`;
     }
