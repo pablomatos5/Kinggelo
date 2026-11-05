@@ -14,7 +14,9 @@ const PORTA = +process.env.PORT || 8090;
 const RAIZ_SITE = path.resolve(__dirname, '..');
 const RAIZ_PAINEL = path.join(__dirname, 'public');
 const HTTPS = process.env.KG_HTTPS === '1';           // atrás do nginx com certificado
-const SESSAO_DIAS = 14;
+// "Manter conectado": 60 dias, renovados enquanto o painel é usado. Sem ele: some ao fechar o navegador ou após 12 h parado.
+const LEMBRAR_MS = 60 * 86400000;
+const CURTA_MS = 12 * 3600000;
 const db = abrirBanco();
 
 const TIPOS = {
@@ -38,10 +40,10 @@ function conferirSenha(senha, guardado) {
 }
 const hashToken = (t) => crypto.createHash('sha256').update(t).digest('hex');
 
-function criarSessao(usuarioId) {
+function criarSessao(usuarioId, lembrar) {
   const token = crypto.randomBytes(32).toString('base64url');
-  const expira = new Date(Date.now() + SESSAO_DIAS * 86400000).toISOString();
-  db.prepare('INSERT INTO sessoes (token_hash, usuario_id, expira_em) VALUES (?, ?, ?)').run(hashToken(token), usuarioId, expira);
+  const expira = new Date(Date.now() + (lembrar ? LEMBRAR_MS : CURTA_MS)).toISOString();
+  db.prepare('INSERT INTO sessoes (token_hash, usuario_id, expira_em, lembrar) VALUES (?, ?, ?, ?)').run(hashToken(token), usuarioId, expira, lembrar ? 1 : 0);
   db.prepare("DELETE FROM sessoes WHERE expira_em < ?").run(new Date().toISOString());
   return token;
 }
@@ -51,12 +53,20 @@ function lerCookies(req) {
 function usuarioDaSessao(req) {
   const t = lerCookies(req).kg_sessao;
   if (!t) return null;
-  const s = db.prepare('SELECT u.id, u.usuario, u.papel, s.expira_em, s.token_hash FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id WHERE s.token_hash = ?').get(hashToken(t));
+  const s = db.prepare('SELECT u.id, u.usuario, u.papel, s.expira_em, s.token_hash, s.lembrar FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id WHERE s.token_hash = ?').get(hashToken(t));
   if (!s || s.expira_em < new Date().toISOString()) return null;
-  return s;
+  return { ...s, token: t };
 }
+// estica o prazo de quem está usando o painel (no máximo uma gravação por hora); devolve o cookie novo quando é lembrada
+function renovarSessao(s) {
+  const dur = s.lembrar ? LEMBRAR_MS : CURTA_MS;
+  if (Date.parse(s.expira_em) - Date.now() > dur - 3600000) return null;
+  db.prepare('UPDATE sessoes SET expira_em = ? WHERE token_hash = ?').run(new Date(Date.now() + dur).toISOString(), s.token_hash);
+  return s.lembrar ? cookieSessao(s.token, dur / 1000) : null;
+}
+// sem maxAge o cookie é de sessão: o navegador apaga ao fechar
 function cookieSessao(token, maxAge) {
-  return `kg_sessao=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${HTTPS ? '; Secure' : ''}`;
+  return `kg_sessao=${token}; Path=/; HttpOnly; SameSite=Strict${maxAge == null ? '' : `; Max-Age=${maxAge}`}${HTTPS ? '; Secure' : ''}`;
 }
 
 // ---------- limite de tentativas (login e formulário público) ----------
@@ -185,7 +195,7 @@ const servidor = http.createServer(async (req, res) => {
       if (caminho === '/api/login' && metodo === 'POST') {
         // só as tentativas erradas contam: quem entra certo várias vezes (vários aparelhos) não fica bloqueado
         if (limitar('login:' + ip, 8, 15 * 60000, false)) return json(res, 429, { erro: 'Muitas tentativas. Espere alguns minutos.' });
-        const { usuario, senha } = await lerCorpo(req);
+        const { usuario, senha, lembrar: lembrarPedido } = await lerCorpo(req);
         const u = db.prepare('SELECT * FROM usuarios WHERE usuario = ?').get(String(usuario || '').trim().toLowerCase());
         // usuário inexistente também passa pelo scrypt: o tempo de resposta não revela quais usuários existem
         const confere = conferirSenha(String(senha || ''), u ? u.senha_hash : HASH_FALSO);
@@ -193,7 +203,8 @@ const servidor = http.createServer(async (req, res) => {
           limitar('login:' + ip, 8, 15 * 60000);
           return json(res, 401, { erro: 'Usuário ou senha incorretos' });
         }
-        return json(res, 200, { ok: true, usuario: u.usuario }, { 'Set-Cookie': cookieSessao(criarSessao(u.id), SESSAO_DIAS * 86400) });
+        const lembrar = lembrarPedido !== false;
+        return json(res, 200, { ok: true, usuario: u.usuario }, { 'Set-Cookie': cookieSessao(criarSessao(u.id, lembrar), lembrar ? LEMBRAR_MS / 1000 : null) });
       }
       if (caminho === '/api/sair' && metodo === 'POST') {
         const t = lerCookies(req).kg_sessao;
@@ -217,6 +228,8 @@ const servidor = http.createServer(async (req, res) => {
 
       const usuario = usuarioDaSessao(req);
       if (!usuario) return json(res, 401, { erro: 'Faça login' });
+      const cookieNovo = renovarSessao(usuario);
+      if (cookieNovo) res.setHeader('Set-Cookie', cookieNovo);
       const dono = usuario.papel === 'dono';
       // downloads (só o dono): cópia do banco agora, backup automático de um dia e planilha de pedidos
       if (metodo === 'GET' && (caminho === '/api/backup' || caminho.startsWith('/api/backups/') || caminho.startsWith('/api/exportar/')) && !dono) {

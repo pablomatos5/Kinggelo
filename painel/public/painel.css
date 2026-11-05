@@ -110,6 +110,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .form-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .check { display: flex; align-items: center; gap: 10px; font-weight: 600; }
 .check input { width: 20px; height: 20px; accent-color: var(--azul); }
+.lembrar { font-size: .88rem; color: var(--marinho); cursor: pointer; min-height: 44px; }
 .erro-form { color: var(--vermelho); font-weight: 600; min-height: 1.2em; margin: 0; }
 
 .busca { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }

@@ -122,6 +122,7 @@
           <p class="login-titulo">Painel Administrativo</p>
           <label class="campo">Usuário<input name="usuario" autocomplete="username" required autofocus></label>
           <label class="campo">Senha<input name="senha" type="password" autocomplete="current-password" required></label>
+          <label class="check lembrar"><input type="checkbox" name="lembrar" checked> Manter conectado neste aparelho</label>
           <p class="erro-form" id="erro-login"></p>
           <button class="btn btn-azul btn-bloco" type="submit">Entrar</button>
         </form>
@@ -130,7 +131,7 @@
       e.preventDefault();
       const d = new FormData(e.target);
       try {
-        await api('POST', '/api/login', { usuario: d.get('usuario'), senha: d.get('senha') });
+        await api('POST', '/api/login', { usuario: d.get('usuario'), senha: d.get('senha'), lembrar: d.has('lembrar') });
         entrar(await api('GET', '/api/eu'));
       } catch (err) { document.getElementById('erro-login').textContent = err.message; }
     };
