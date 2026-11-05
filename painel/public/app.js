@@ -164,7 +164,7 @@
           </div>
         </aside>
         <div>
-          <header class="barra-topo"><img src="/img/cliente/logo-gelo.webp" alt="King Gelo"><a href="#/ajustes">Ajustes</a></header>
+          <header class="barra-topo"><img src="/img/cliente/logo-gelo.webp" alt="King Gelo"><a href="#/ajustes" data-menu="ajustes">Ajustes</a></header>
           <main class="principal" id="principal"></main>
         </div>
       </div>
@@ -319,6 +319,7 @@
         </section>
         <section class="cartao">
           <h2>Unidades (30 dias) <a href="#/unidades">ver detalhes</a></h2>
+          <p class="meta cartao-sub">Contato = toque num botão de WhatsApp do site (ainda não é pedido).</p>
           <div class="lista">${r.porUnidade.map((u) => `
             <a class="linha-item" href="#/unidades">
               <span class="avatar" style="background:${COR_UNIDADE[u.id]}">${iniciais(u.nome)}</span>
@@ -748,11 +749,16 @@
     principal.innerHTML = `
       <div class="topo-pagina"><div><h1>Unidades</h1><p class="sub">Quem procura Cametá e quem procura Tucuruí</p></div></div>
       <div class="chips">${[7, 30, 90].map((d) => `<a class="chip" href="#/unidades?dias=${d}" aria-pressed="${d === dias}">${d} dias</a>`).join('')}</div>
+      <dl class="cartao legenda-numeros">
+        <div><dt>Contato pelo site</dt><dd>Alguém tocou num botão de WhatsApp do site. <strong>Ainda não é pedido:</strong> o site não sabe se a pessoa mandou mensagem ou comprou.</dd></div>
+        <div><dt>Interessado</dt><dd>Preencheu o formulário de revenda, com nome e telefone. Fica em Clientes.</dd></div>
+        <div><dt>Pedido</dt><dd>Venda lançada aqui no painel. Venda fechada no WhatsApp só conta quando alguém lança o pedido.</dd></div>
+      </dl>
       <div class="grade grade-2">${r.lista.map(cartao).join('')}</div>
       <div class="grade grade-2" style="margin-top:16px">
         <section class="cartao">
           <h2>Últimos contatos pelo site</h2>
-          <p class="meta cartao-sub">Cada toque num botão de WhatsApp do site, com a unidade que a pessoa escolheu.</p>
+          <p class="meta cartao-sub">Cada toque num botão de WhatsApp do site, com a unidade que a pessoa escolheu. Não é pedido: se a conversa virar venda, lance o pedido em Pedidos.</p>
           ${r.ultimos.length ? `<div class="lista">${r.ultimos.map((c) => `
             <div class="linha-item">
               <span class="avatar" style="background:${COR_UNIDADE[c.unidade] || 'var(--azul)'}">${iniciais(nomeUnidade(c.unidade))}</span>
@@ -965,6 +971,11 @@
           <label class="campo">Mensagem do aviso<textarea name="mensagem_aviso" rows="5">${esc(c.mensagem_aviso)}</textarea><small>Use {nome}, {estabelecimento} e {sugestao}.</small></label>
           <button class="btn btn-azul" type="submit">Salvar ajustes</button>
         </form>` : ''}
+        <section class="cartao">
+          <h2>Apresentação do painel</h2>
+          <p class="meta">Um passeio rápido por cada parte do painel, com o que cada número quer dizer.</p>
+          <button class="btn btn-claro" type="button" id="ver-tutorial">Ver a apresentação de novo</button>
+        </section>
         <form class="cartao form" id="form-senha">
           <h2>Trocar minha senha</h2>
           <label class="campo">Senha atual<input name="atual" type="password" autocomplete="current-password" required></label>
@@ -1021,6 +1032,7 @@
       await api('PUT', '/api/config', Object.fromEntries(new FormData(e.target)));
       toast('Ajustes salvos');
     });
+    document.getElementById('ver-tutorial').onclick = abrirTutorial;
     document.getElementById('form-senha').onsubmit = async (e) => {
       e.preventDefault();
       try { await api('PUT', '/api/senha', Object.fromEntries(new FormData(e.target))); toast('Senha trocada'); e.target.reset(); }
@@ -1081,6 +1093,85 @@
     } catch {}
   }
 
+  // ---------- apresentação do painel ----------
+  // Um mascote de gelo explica cada parte, num balão de fala. Aparece no primeiro login de cada pessoa (o servidor
+  // guarda que ela já viu) e pode ser revista em Ajustes. Cada passo abre a tela de verdade por trás e faz o item do
+  // menu pulsar, para a pessoa aprender onde fica.
+  function passosTutorial() {
+    const dono = ehDono();
+    return [
+      { menu: 'inicio', mascote: 'mascote-laranja-logo', titulo: 'Oi! Eu sou o King Gelo de laranja', texto: '<p>Vou te mostrar o painel em menos de um minuto: onde ficam os pedidos, os clientes, o estoque e o que chega pelo site.</p><p>Se estiver com pressa, pode pular. Depois é só me chamar em <b>Ajustes</b>.</p>' },
+      { menu: 'inicio', mascote: 'mascote-melancia', titulo: 'Aqui é o Início', texto: dono
+        ? '<p>É o resumo do dia: quanto vendeu no mês, o que falta receber, as entregas de hoje e de amanhã e quem precisa de reposição.</p><p>Eu começaria o dia sempre por aqui!</p>'
+        : '<p>É o resumo do dia: as entregas de hoje e de amanhã, o estoque e quem precisa de reposição.</p><p>Eu começaria o dia sempre por aqui!</p>' },
+      { menu: 'pedidos', mascote: 'mascote-morango', titulo: 'Os pedidos ficam aqui', texto: '<p>Cada venda vira um pedido, com cliente, sabores, quantidade, entrega e pagamento. Os filtros (<b>Para entregar</b>, <b>A receber</b>…) ajudam a achar rápido, e dá para imprimir a lista de entregas do dia.</p><p class="tour-destaque">Importante: venda fechada pelo WhatsApp só aparece aqui quando alguém lança o pedido no painel.</p>' },
+      { menu: 'clientes', mascote: 'mascote-macaverde', titulo: 'Esses são os clientes', texto: '<p>Casas de bebidas, mercados e distribuidoras, separados por unidade.</p><p>Quem preenche o formulário de revenda lá no site entra aqui sozinho como <b>Interessado</b>, e vira <b>Ativo</b> no primeiro pedido.</p>' },
+      { menu: 'unidades', mascote: 'mascote-frutas', titulo: 'Unidades: Cametá e Tucuruí', texto: '<p>Aqui você vê quem procura cada unidade pelo site. Presta atenção no que cada número quer dizer:</p><ul class="tour-lista"><li><b>Contato pelo site</b>: alguém tocou num botão de WhatsApp do site. <b>Ainda não é pedido!</b> O site não sabe se a pessoa mandou mensagem ou comprou.</li><li><b>Interessado</b>: preencheu o formulário de revenda, com nome e telefone.</li><li><b>Pedido</b>: venda lançada aqui no painel.</li></ul>' },
+      { menu: 'estoque', mascote: 'mascote-coco', titulo: 'Aqui é o meu freezer', texto: '<p>O estoque de cada sabor. Toque em <b>+ Entrada</b> quando produzir e em <b>Contagem</b> para acertar com o que tem de verdade no freezer.</p><p>Quando um sabor fica abaixo do mínimo, aparece <b>Repor</b>.</p>' },
+      { menu: 'avisos', mascote: 'mascote-laranja', titulo: 'Os avisos de reposição', texto: '<p>Pela média de consumo de cada cliente, eu calculo quem já deve estar ficando sem gelo e deixo a mensagem de WhatsApp prontinha para oferecer reposição.</p>' },
+      dono && { menu: 'financeiro', mascote: 'mascote-melancia', titulo: 'O financeiro', texto: '<p>Vendido, recebido, despesas e o lucro do mês.</p><p>Lance as despesas (saquinho, polpa, energia, entrega…) para ver o lucro de verdade.</p>' },
+      { menu: 'ajustes', mascote: 'mascote-coco', titulo: 'E os ajustes', texto: dono
+        ? '<p>Aqui você troca a senha, cria acessos para a equipe, baixa cópias de segurança e muda a mensagem dos avisos.</p><p>E é aqui que você me chama de novo, se quiser rever a apresentação.</p>'
+        : '<p>Aqui você troca a sua senha. E é aqui que você me chama de novo, se quiser rever a apresentação.</p>' },
+      { menu: 'inicio', mascote: 'mascote-laranja', titulo: 'Pronto, agora é com você!', texto: '<p>Uma dica: no celular, dá para instalar o painel na tela inicial e abrir como um aplicativo. Quando aparecer o cartão <b>Use o painel como app</b> no Início, é só tocar em <b>Instalar o app</b>.</p>', fim: true },
+    ].filter(Boolean);
+  }
+  function abrirTutorial() {
+    document.querySelector('.tour')?.remove();
+    const passos = passosTutorial();
+    // já baixa os mascotes, para a troca de passo não esperar imagem
+    [...new Set(passos.map((p) => p.mascote))].forEach((m) => { const im = new Image(); im.src = `/img/cliente/${m}.webp`; });
+    let i = 0;
+    const caixa = document.createElement('div');
+    caixa.className = 'tour';
+    caixa.setAttribute('role', 'dialog');
+    caixa.setAttribute('aria-modal', 'false');
+    caixa.setAttribute('aria-labelledby', 'tour-titulo');
+    document.body.append(caixa);
+    const marcar = (menu) => {
+      document.querySelectorAll('.tour-alvo').forEach((el) => el.classList.remove('tour-alvo'));
+      document.querySelectorAll(`[data-menu="${menu}"]`).forEach((el) => el.classList.add('tour-alvo'));
+    };
+    const fechar = () => {
+      caixa.remove();
+      marcar('-');
+      document.removeEventListener('keydown', tecla);
+      api('POST', '/api/tutorial').catch(() => {});
+    };
+    const tecla = (e) => { if (e.key === 'Escape') fechar(); };
+    document.addEventListener('keydown', tecla);
+    const mostrar = () => {
+      const p = passos[i];
+      if (location.hash.replace(/^#\/?/, '').split(/[/?]/)[0] !== p.menu) location.hash = `#/${p.menu}`;
+      marcar(p.menu);
+      caixa.innerHTML = `
+        <div class="tour-cartao">
+          <div class="tour-mascote"><img src="/img/cliente/${p.mascote}.webp" alt="" width="520" height="780"></div>
+          <div class="tour-fala">
+            <div class="tour-cabeca"><span class="tour-passo">${i + 1} de ${passos.length}</span>
+              <button class="tour-x" type="button" data-tour="pular" aria-label="Fechar a apresentação">×</button></div>
+            <h2 id="tour-titulo">${p.titulo}</h2>
+            <div class="tour-texto">${p.texto}</div>
+            <div class="tour-pontos" aria-hidden="true">${passos.map((_, k) => `<i class="${k === i ? 'ativo' : ''}"></i>`).join('')}</div>
+            <div class="tour-botoes">
+              ${i > 0 ? '<button class="btn btn-claro" type="button" data-tour="voltar">Voltar</button>' : '<button class="btn btn-claro" type="button" data-tour="pular">Pular</button>'}
+              <button class="btn btn-azul" type="button" data-tour="${p.fim ? 'fim' : 'proximo'}">${p.fim ? 'Começar a usar' : i === 0 ? 'Bora!' : 'Próximo'}</button>
+            </div>
+          </div>
+        </div>`;
+      caixa.querySelector('[data-tour="proximo"], [data-tour="fim"]').focus();
+    };
+    caixa.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-tour]');
+      if (!b) return;
+      const acao = b.dataset.tour;
+      if (acao === 'pular' || acao === 'fim') { fechar(); if (acao === 'fim') location.hash = '#/inicio'; return; }
+      i = Math.max(0, Math.min(passos.length - 1, i + (acao === 'voltar' ? -1 : 1)));
+      mostrar();
+    });
+    mostrar();
+  }
+
   // ---------- rotas ----------
   async function rota() {
     if (!principal) return;
@@ -1133,6 +1224,8 @@
     usuarioAtual = eu.usuario;
     montarCasca();
     rota();
+    // primeiro login desta pessoa: apresentação do painel
+    if (eu.tutorialVisto === false) setTimeout(abrirTutorial, 600);
     api('GET', '/api/avisos').then((l) => contadorAvisos(l.length)).catch(() => {});
     conferirNovidades();
   }

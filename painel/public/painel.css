@@ -404,3 +404,49 @@ dialog::backdrop { background: rgba(8, 25, 55, .55); backdrop-filter: blur(3px);
 @container (max-width: 560px) {
   .numeros-unidade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ---------- apresentação do painel (tour): um mascote de gelo explica cada passo num balão ---------- */
+.tour { position: fixed; z-index: 90; right: 20px; bottom: 20px; width: min(500px, calc(100vw - 20px)); pointer-events: none; }
+.tour-cartao { display: grid; grid-template-columns: 118px 1fr; align-items: end; gap: 14px; pointer-events: none; }
+.tour-mascote { pointer-events: none; animation: tour-entra .35s ease-out; }
+.tour-mascote img { display: block; width: 118px; height: 160px; object-fit: cover; object-position: 50% 30%; border-radius: 22px; box-shadow: 0 14px 34px rgba(8, 40, 90, .3), 0 0 0 4px #fff; animation: tour-balanca 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes tour-balanca { 0%, 100% { transform: rotate(-2deg) translateY(0); } 50% { transform: rotate(2deg) translateY(-6px); } }
+.tour-fala { position: relative; pointer-events: auto; background: #fff; border-radius: 20px; padding: 14px 18px 14px; box-shadow: 0 18px 50px rgba(8, 40, 90, .28), 0 0 0 1.5px var(--linha); animation: tour-entra .3s .08s ease-out both; }
+/* o biquinho do balão aponta para o mascote */
+.tour-fala::before { content: ""; position: absolute; left: -11px; bottom: 34px; width: 22px; height: 22px; background: #fff; transform: rotate(45deg); border-left: 1.5px solid var(--linha); border-bottom: 1.5px solid var(--linha); }
+@keyframes tour-entra { from { opacity: 0; transform: translateY(14px) scale(.96); } }
+.tour-cabeca { display: flex; align-items: center; gap: 10px; }
+.tour-passo { font-size: .78rem; font-weight: 700; color: var(--suave); }
+.tour-x { margin-left: auto; width: 34px; height: 34px; margin-right: -6px; border: 0; border-radius: 50%; background: transparent; font-size: 1.5rem; line-height: 1; color: var(--suave); cursor: pointer; }
+.tour h2 { font-family: var(--display); color: var(--marinho); font-size: 1.3rem; line-height: 1.1; margin: 0 0 8px; }
+.tour-texto { position: relative; color: var(--texto); font-size: .94rem; line-height: 1.45; display: grid; gap: 8px; }
+.tour-texto p, .tour-texto ul { margin: 0; }
+.tour-texto b { color: var(--marinho); }
+.tour-destaque { background: #fff5d6; border-radius: 10px; padding: 8px 10px; font-weight: 600; }
+.tour-lista { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.tour-pontos { display: flex; gap: 5px; justify-content: center; margin: 12px 0 10px; }
+.tour-pontos i { width: 7px; height: 7px; border-radius: 50%; background: var(--linha); transition: width .2s, background .2s; }
+.tour-pontos i.ativo { width: 20px; border-radius: 4px; background: var(--azul); }
+.tour-botoes { display: flex; gap: 8px; }
+.tour-botoes .btn { flex: 1; justify-content: center; }
+/* o item do menu do passo atual pulsa, para a pessoa aprender onde fica */
+.tour-alvo { position: relative; box-shadow: 0 0 0 3px #ffc83d; border-radius: 12px; animation: tour-pulsa 1.4s ease-in-out infinite; }
+@keyframes tour-pulsa { 50% { box-shadow: 0 0 0 6px rgba(255, 200, 61, .45); } }
+@media (max-width: 860px) {
+  /* no celular: mascote menor, balão ao lado, tudo logo acima do menu de baixo (que continua à vista) */
+  .tour { left: 8px; right: 8px; width: auto; bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .tour-cartao { grid-template-columns: 76px 1fr; gap: 10px; }
+  .tour-mascote img { width: 76px; height: 104px; border-radius: 16px; box-shadow: 0 10px 24px rgba(8, 40, 90, .3), 0 0 0 3px #fff; }
+  .tour-fala { padding: 12px 14px; max-height: calc(100vh - 170px); overflow: auto; }
+  .tour-fala::before { bottom: 24px; left: -9px; width: 18px; height: 18px; }
+  .tour h2 { font-size: 1.12rem; }
+  .tour-texto { font-size: .88rem; }
+}
+@media (prefers-reduced-motion: reduce) { .tour-mascote, .tour-mascote img, .tour-fala, .tour-alvo { animation: none; } }
+
+/* legenda dos números da tela de Unidades */
+.legenda-numeros { display: grid; gap: 10px; margin-bottom: 16px; }
+.legenda-numeros div { display: grid; gap: 2px; }
+.legenda-numeros dt { font-weight: 800; color: var(--marinho); }
+.legenda-numeros dd { margin: 0; color: var(--suave); font-size: .92rem; }
+@media (min-width: 861px) { .legenda-numeros { grid-template-columns: repeat(3, 1fr); gap: 18px; } }

@@ -139,6 +139,8 @@ function abrirBanco(arquivo = caminhoBanco()) {
   // colunas que vieram depois (bancos antigos ganham a coluna sem perder nada)
   const temColuna = (tabela, coluna) => db.prepare(`PRAGMA table_info(${tabela})`).all().some((c) => c.name === coluna);
   if (!temColuna('usuarios', 'papel')) db.exec("ALTER TABLE usuarios ADD COLUMN papel TEXT NOT NULL DEFAULT 'dono'");  // dono | equipe
+  // apresentação do painel: aparece no primeiro login de cada pessoa (e pode ser revista em Ajustes)
+  if (!temColuna('usuarios', 'tutorial_visto')) db.exec('ALTER TABLE usuarios ADD COLUMN tutorial_visto INTEGER NOT NULL DEFAULT 0');
   // sessões antigas continuam lembradas (era o comportamento de antes)
   if (!temColuna('sessoes', 'lembrar')) db.exec('ALTER TABLE sessoes ADD COLUMN lembrar INTEGER NOT NULL DEFAULT 1');
   if (!temColuna('pedidos', 'entrega_em')) db.exec('ALTER TABLE pedidos ADD COLUMN entrega_em TEXT');              // dia marcado (AAAA-MM-DD)

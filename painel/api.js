@@ -221,7 +221,15 @@ function insightsInicio(db, produtos, vendas, mes) {
 }
 
 const rotas = [
-  ['GET', /^\/api\/eu$/, ({ usuario }) => ({ usuario: usuario.usuario, papel: usuario.papel })],
+  ['GET', /^\/api\/eu$/, ({ db, usuario }) => {
+    const u = db.prepare('SELECT tutorial_visto FROM usuarios WHERE id = ?').get(usuario.id);
+    return { usuario: usuario.usuario, papel: usuario.papel, tutorialVisto: !!(u && u.tutorial_visto) };
+  }],
+  // a pessoa terminou (ou pulou) a apresentação do painel
+  ['POST', /^\/api\/tutorial$/, ({ db, usuario }) => {
+    db.prepare('UPDATE usuarios SET tutorial_visto = 1 WHERE id = ?').run(usuario.id);
+    return { ok: true };
+  }],
   // o painel pergunta de minuto em minuto: aparece aviso quando chega interessado novo pelo site
   ['GET', /^\/api\/novidades$/, ({ db }) => ({
     leads: db.prepare("SELECT COUNT(*) AS n FROM clientes WHERE status = 'lead'").get().n,
