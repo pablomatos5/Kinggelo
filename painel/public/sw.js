@@ -1,6 +1,6 @@
 // Service worker do painel: deixa instalar como app e abre a "casca" mesmo com internet ruim.
 // Os dados (/api) nunca ficam guardados: sempre vêm do servidor.
-const CACHE = 'kg-painel-v7';  // v7: apresentação com o mascote
+const CACHE = 'kg-painel-v8';  // v8: mascotes recortados na apresentação
 const CASCA = ['/admin/', '/admin/app.js', '/admin/painel.css', '/admin/manifest.webmanifest', '/admin/icones/icone-192.png', '/img/cliente/logo-gelo.webp',
   '/fontes/fontes.css', '/fontes/outfit-latin-var.woff2', '/fontes/anton-latin.woff2'];
 

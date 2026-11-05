@@ -1100,7 +1100,7 @@
   function passosTutorial() {
     const dono = ehDono();
     return [
-      { menu: 'inicio', mascote: 'mascote-laranja-logo', titulo: 'Oi! Eu sou o King Gelo de laranja', texto: '<p>Vou te mostrar o painel em menos de um minuto: onde ficam os pedidos, os clientes, o estoque e o que chega pelo site.</p><p>Se estiver com pressa, pode pular. Depois é só me chamar em <b>Ajustes</b>.</p>' },
+      { menu: 'inicio', mascote: 'mascote-frutas', titulo: 'Oi! Eu sou o King, o gelo de frutas vermelhas', texto: '<p>Vou te mostrar o painel em menos de um minuto: onde ficam os pedidos, os clientes, o estoque e o que chega pelo site.</p><p>Se estiver com pressa, pode pular. Depois é só me chamar em <b>Ajustes</b>.</p>' },
       { menu: 'inicio', mascote: 'mascote-melancia', titulo: 'Aqui é o Início', texto: dono
         ? '<p>É o resumo do dia: quanto vendeu no mês, o que falta receber, as entregas de hoje e de amanhã e quem precisa de reposição.</p><p>Eu começaria o dia sempre por aqui!</p>'
         : '<p>É o resumo do dia: as entregas de hoje e de amanhã, o estoque e quem precisa de reposição.</p><p>Eu começaria o dia sempre por aqui!</p>' },
@@ -1110,7 +1110,7 @@
       { menu: 'estoque', mascote: 'mascote-coco', titulo: 'Aqui é o meu freezer', texto: '<p>O estoque de cada sabor. Toque em <b>+ Entrada</b> quando produzir e em <b>Contagem</b> para acertar com o que tem de verdade no freezer.</p><p>Quando um sabor fica abaixo do mínimo, aparece <b>Repor</b>.</p>' },
       { menu: 'avisos', mascote: 'mascote-laranja', titulo: 'Os avisos de reposição', texto: '<p>Pela média de consumo de cada cliente, eu calculo quem já deve estar ficando sem gelo e deixo a mensagem de WhatsApp prontinha para oferecer reposição.</p>' },
       dono && { menu: 'financeiro', mascote: 'mascote-melancia', titulo: 'O financeiro', texto: '<p>Vendido, recebido, despesas e o lucro do mês.</p><p>Lance as despesas (saquinho, polpa, energia, entrega…) para ver o lucro de verdade.</p>' },
-      { menu: 'ajustes', mascote: 'mascote-coco', titulo: 'E os ajustes', texto: dono
+      { menu: 'ajustes', mascote: 'mascote-macaverde', titulo: 'E os ajustes', texto: dono
         ? '<p>Aqui você troca a senha, cria acessos para a equipe, baixa cópias de segurança e muda a mensagem dos avisos.</p><p>E é aqui que você me chama de novo, se quiser rever a apresentação.</p>'
         : '<p>Aqui você troca a sua senha. E é aqui que você me chama de novo, se quiser rever a apresentação.</p>' },
       { menu: 'inicio', mascote: 'mascote-laranja', titulo: 'Pronto, agora é com você!', texto: '<p>Uma dica: no celular, dá para instalar o painel na tela inicial e abrir como um aplicativo. Quando aparecer o cartão <b>Use o painel como app</b> no Início, é só tocar em <b>Instalar o app</b>.</p>', fim: true },
@@ -1120,7 +1120,7 @@
     document.querySelector('.tour')?.remove();
     const passos = passosTutorial();
     // já baixa os mascotes, para a troca de passo não esperar imagem
-    [...new Set(passos.map((p) => p.mascote))].forEach((m) => { const im = new Image(); im.src = `/img/cliente/${m}.webp`; });
+    [...new Set(passos.map((p) => p.mascote))].forEach((m) => { const im = new Image(); im.src = `/img/cliente/recorte/${m}.webp`; });
     let i = 0;
     const caixa = document.createElement('div');
     caixa.className = 'tour';
@@ -1146,7 +1146,7 @@
       marcar(p.menu);
       caixa.innerHTML = `
         <div class="tour-cartao">
-          <div class="tour-mascote"><img src="/img/cliente/${p.mascote}.webp" alt="" width="520" height="780"></div>
+          <div class="tour-mascote"><img src="/img/cliente/recorte/${p.mascote}.webp" alt=""><i class="tour-chao"></i></div>
           <div class="tour-fala">
             <div class="tour-cabeca"><span class="tour-passo">${i + 1} de ${passos.length}</span>
               <button class="tour-x" type="button" data-tour="pular" aria-label="Fechar a apresentação">×</button></div>
