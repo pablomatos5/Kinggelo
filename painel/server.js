@@ -7,7 +7,8 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
 const { abrirBanco } = require('./banco');
-const { rotas } = require('./api');
+const { rotas, semDinheiro } = require('./api');
+const backup = require('./backup');
 
 const PORTA = +process.env.PORT || 8090;
 const RAIZ_SITE = path.resolve(__dirname, '..');
@@ -20,6 +21,7 @@ const TIPOS = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png',
   '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.mp4': 'video/mp4', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8',
 };
 
 // ---------- senhas e sessões ----------
@@ -49,7 +51,7 @@ function lerCookies(req) {
 function usuarioDaSessao(req) {
   const t = lerCookies(req).kg_sessao;
   if (!t) return null;
-  const s = db.prepare('SELECT u.id, u.usuario, s.expira_em, s.token_hash FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id WHERE s.token_hash = ?').get(hashToken(t));
+  const s = db.prepare('SELECT u.id, u.usuario, u.papel, s.expira_em, s.token_hash FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id WHERE s.token_hash = ?').get(hashToken(t));
   if (!s || s.expira_em < new Date().toISOString()) return null;
   return s;
 }
@@ -104,8 +106,8 @@ const SEGURANCA = {
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Content-Security-Policy': [
-    "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self'", "connect-src 'self'",
+    "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'", "img-src 'self' data: blob:", "media-src 'self'", "connect-src 'self'",
     "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'",
   ].join('; '),
 };
@@ -115,7 +117,7 @@ if (HTTPS) {
 }
 
 // texto (html/css/js/svg/json) vai comprimido; a versão comprimida fica em memória até o arquivo mudar
-const COMPRIMIVEL = new Set(['.html', '.css', '.js', '.svg', '.json', '.txt', '.webmanifest']);
+const COMPRIMIVEL = new Set(['.html', '.css', '.js', '.svg', '.json', '.txt', '.xml', '.webmanifest']);
 const comprimidos = new Map();
 function comprimido(alvo, etag, tipo) {
   const chave = `${alvo}|${tipo}`;
@@ -140,8 +142,12 @@ function servirArquivo(res, raiz, rel, req) {
   if (st.isDirectory()) return servirArquivo(res, raiz, path.posix.join(rel, 'index.html'), req);
   const ext = path.extname(alvo).toLowerCase();
   const etag = `"${st.size.toString(36)}-${st.mtimeMs.toString(36)}"`;
-  // html/css/js sempre revalidam (ETag); imagens ficam 1 dia no cache
-  const cache = /\/img\//.test(alvo) ? 'public, max-age=86400' : 'no-cache';
+  // html/css/js sempre revalidam (ETag): mudanca no codigo aparece na hora. Fontes e a biblioteca 3D nao mudam
+  // (1 ano). Imagens ficam 30 dias no aparelho: ao TROCAR uma imagem, salve com nome novo, senao quem ja visitou
+  // continua vendo a antiga. (Antes o teste era por "/img/" no caminho e falhava no Windows, que usa "\".)
+  const pasta = raiz === RAIZ_SITE ? relativo[0] : '';
+  const cache = pasta === 'fontes' || pasta === 'vendor' ? 'public, max-age=31536000, immutable'
+    : pasta === 'img' ? 'public, max-age=2592000' : 'no-cache';
   const base = { ...SEGURANCA, ETag: etag, 'Cache-Control': cache };
   if (req.headers['if-none-match'] === etag) { res.writeHead(304, base); res.end(); return true; }
   const aceita = String(req.headers['accept-encoding'] || '');
@@ -211,7 +217,17 @@ const servidor = http.createServer(async (req, res) => {
 
       const usuario = usuarioDaSessao(req);
       if (!usuario) return json(res, 401, { erro: 'Faça login' });
-      // downloads: cópia do banco e planilha de pedidos
+      const dono = usuario.papel === 'dono';
+      // downloads (só o dono): cópia do banco agora, backup automático de um dia e planilha de pedidos
+      if (metodo === 'GET' && (caminho === '/api/backup' || caminho.startsWith('/api/backups/') || caminho.startsWith('/api/exportar/')) && !dono) {
+        return json(res, 403, { erro: 'Só o dono pode baixar os dados' });
+      }
+      if (metodo === 'GET' && caminho.startsWith('/api/backups/')) {
+        const arq = backup.arquivo(caminho.slice('/api/backups/'.length));
+        if (!arq || !fs.existsSync(arq)) return json(res, 404, { erro: 'Backup não encontrado' });
+        res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${path.basename(arq)}"`, 'Cache-Control': 'no-store' });
+        return fs.createReadStream(arq).pipe(res);
+      }
       if (metodo === 'GET' && caminho === '/api/backup') {
         const tmp = path.join(require('node:os').tmpdir(), `kinggelo-${Date.now()}.db`);
         db.exec(`VACUUM INTO '${tmp.replace(/'/g, "''")}'`);
@@ -221,7 +237,8 @@ const servidor = http.createServer(async (req, res) => {
       }
       if (metodo === 'GET' && caminho === '/api/exportar/pedidos.csv') {
         const linhas = db.prepare(`
-          SELECT p.id, p.criado_em, p.status, p.pagamento, p.pago, c.estabelecimento, c.nome, c.cidade, c.telefone,
+          SELECT p.id, p.criado_em, p.entrega_em, p.status, p.pagamento, p.pago, c.estabelecimento, c.nome, c.cidade, c.telefone,
+                 (SELECT COALESCE(SUM(valor), 0) FROM pagamentos WHERE pedido_id = p.id) AS recebido,
                  pr.nome AS sabor, i.quantidade, i.preco_unit
           FROM pedidos p JOIN clientes c ON c.id = p.cliente_id
           JOIN itens_pedido i ON i.pedido_id = p.id JOIN produtos pr ON pr.id = i.produto_id
@@ -234,20 +251,24 @@ const servidor = http.createServer(async (req, res) => {
           return `"${t.replace(/"/g, '""')}"`;
         };
         const valor = (c) => (c / 100).toFixed(2).replace('.', ',');
-        const csv = ['Pedido;Data;Situação;Pagamento;Pago;Estabelecimento;Responsável;Cidade;WhatsApp;Sabor;Quantidade;Preço unitário;Total']
-          .concat(linhas.map((l) => [l.id, l.criado_em, l.status, l.pagamento, l.pago ? 'sim' : 'não', l.estabelecimento, l.nome, l.cidade, l.telefone,
+        // "Recebido no pedido" se repete em cada sabor do mesmo pedido (é do pedido todo, não da linha)
+        const csv = ['Pedido;Data;Entrega marcada;Situação;Pagamento;Pago;Recebido no pedido;Estabelecimento;Responsável;Cidade;WhatsApp;Sabor;Quantidade;Preço unitário;Total']
+          .concat(linhas.map((l) => [l.id, l.criado_em, l.entrega_em || '', l.status, l.pagamento, l.pago ? 'sim' : 'não', valor(l.recebido), l.estabelecimento, l.nome, l.cidade, l.telefone,
             l.sabor, l.quantidade, valor(l.preco_unit), valor(l.quantidade * l.preco_unit)].map(cel).join(';'))).join('\r\n');
         res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="pedidos-kinggelo-${new Date().toISOString().slice(0, 10)}.csv"`, 'Cache-Control': 'no-store' });
         return res.end('\ufeff' + csv);
       }
-      for (const [m, padrao, fn] of rotas) {
+      for (const [m, padrao, fn, so] of rotas) {
         if (m !== metodo) continue;
         const achou = caminho.match(padrao);
         if (!achou) continue;
+        // rotas marcadas 'dono' (dinheiro, acessos, ajustes) não abrem para a equipe
+        if (so === 'dono' && !dono) return json(res, 403, { erro: 'Só o dono pode fazer isso' });
         const corpo = metodo === 'GET' ? {} : await lerCorpo(req);
         const r = fn({ db, params: achou.slice(1), corpo, query: url.searchParams, usuario, hashSenha, conferirSenha });
-        // rotas que criam algo devolvem { http: 201, corpo }
-        return r && r.http ? json(res, r.http, r.corpo) : json(res, 200, r);
+        // rotas que criam algo devolvem { http: 201, corpo }; para a equipe os valores em dinheiro saem da resposta
+        const [status, corpoResp] = r && r.http ? [r.http, r.corpo] : [200, r];
+        return json(res, status, dono ? corpoResp : semDinheiro(corpoResp));
       }
       return json(res, 404, { erro: 'Rota não encontrada' });
     }
@@ -278,6 +299,7 @@ servidor.requestTimeout = 30000;
 servidor.keepAliveTimeout = 5000;
 
 if (require.main === module) {
+  backup.agendar(db);
   servidor.listen(PORTA, () => console.log(`King Gelo em http://localhost:${PORTA}  ·  painel em http://localhost:${PORTA}/admin/`));
 }
 module.exports = { db, hashSenha, servidor };

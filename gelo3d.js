@@ -275,111 +275,132 @@ if (renderer && queda) {
   };
 
   // ---------- o mesmo bloco dentro do copão ----------
-  // o copo é dividido em duas camadas: fundo + drink atrás, e tom do drink + vidro da frente na frente.
-  // Entre elas, um canvas recebe o bloco 3D: inteiro acima do nível e, abaixo, deslocado e ampliado (refração).
-  const copoSvg = document.getElementById('copao');
-  const grupoAcima = document.getElementById('gelo-copo'), grupoAbaixo = document.getElementById('gelo-copo-refracao');
-  let r2 = null;
-  const telaCopo = document.createElement('canvas');
-  try {
-    if (copoSvg && grupoAcima && grupoAbaixo) r2 = new THREE.WebGLRenderer({ canvas: telaCopo, alpha: true, antialias: true });
-  } catch (e) { r2 = null; }
-  if (r2) {
-    r2.setClearColor(0x000000, 0);
-    r2.toneMapping = THREE.ACESFilmicToneMapping;
-    r2.toneMappingExposure = 1.05;
-    const NSX = 'http://www.w3.org/2000/svg';
-    const frente = document.createElementNS(NSX, 'svg');
-    frente.setAttribute('viewBox', copoSvg.getAttribute('viewBox'));
-    frente.setAttribute('aria-hidden', 'true');
-    frente.classList.add('copao-frente');
-    // tudo o que vem depois do gelo submerso vai para a camada da frente (os nós são movidos, as referências continuam valendo)
-    const base = grupoAbaixo.parentNode;
-    while (base.nextSibling) frente.appendChild(base.nextSibling);
-    grupoAcima.style.display = grupoAbaixo.style.display = 'none';
-    // a frente ainda é dividida: o que muda a cada quadro (tom do suco, borda, respingos) fica numa camada
-    // leve; vidro, reflexos com desfoque, logo e as gotas de condensação vão para uma camada que nunca muda
-    // (o navegador desenha uma vez e reaproveita, em vez de refazer os desfoques a cada quadro do mergulho)
-    const fixa = document.createElementNS(NSX, 'svg');
-    fixa.setAttribute('viewBox', copoSvg.getAttribute('viewBox'));
-    fixa.setAttribute('aria-hidden', 'true');
-    fixa.classList.add('copao-frente', 'copao-fixa');
-    const respingosEl = frente.querySelector('#respingos');
-    while (respingosEl && respingosEl.nextSibling) fixa.appendChild(respingosEl.nextSibling);
-    const camada = document.createElement('canvas');
-    camada.className = 'copao-gelo';
-    copoSvg.after(camada, frente, fixa);
-    copoSvg.parentNode.classList.add('copo-3d');
+  // preparado a parte, quando o navegador estiver livre (ou na hora, se o copo chegar antes): o segundo WebGL
+  // e a segunda luz de ambiente juntos com os da queda travavam o celular por quase 1 s na abertura
+  let copoIniciado = false;
+  function iniciarCopo() {
+    if (copoIniciado) return;
+    copoIniciado = true;
+    delete window.__gelo3d.copo;
+    // o copo é dividido em duas camadas: fundo + drink atrás, e tom do drink + vidro da frente na frente.
+    // Entre elas, um canvas recebe o bloco 3D: inteiro acima do nível e, abaixo, deslocado e ampliado (refração).
+    const copoSvg = document.getElementById('copao');
+    const grupoAcima = document.getElementById('gelo-copo'), grupoAbaixo = document.getElementById('gelo-copo-refracao');
+    let r2 = null;
+    const telaCopo = document.createElement('canvas');
+    try {
+      if (copoSvg && grupoAcima && grupoAbaixo) r2 = new THREE.WebGLRenderer({ canvas: telaCopo, alpha: true, antialias: true });
+    } catch (e) { r2 = null; }
+    if (r2) {
+      r2.setClearColor(0x000000, 0);
+      r2.toneMapping = THREE.ACESFilmicToneMapping;
+      r2.toneMappingExposure = 1.05;
+      const NSX = 'http://www.w3.org/2000/svg';
+      const frente = document.createElementNS(NSX, 'svg');
+      frente.setAttribute('viewBox', copoSvg.getAttribute('viewBox'));
+      frente.setAttribute('aria-hidden', 'true');
+      frente.classList.add('copao-frente');
+      // tudo o que vem depois do gelo submerso vai para a camada da frente (os nós são movidos, as referências continuam valendo)
+      const base = grupoAbaixo.parentNode;
+      while (base.nextSibling) frente.appendChild(base.nextSibling);
+      grupoAcima.style.display = grupoAbaixo.style.display = 'none';
+      // a frente ainda é dividida: o que muda a cada quadro (tom do suco, borda, respingos) fica numa camada
+      // leve; vidro, reflexos com desfoque, logo e as gotas de condensação vão para uma camada que nunca muda
+      // (o navegador desenha uma vez e reaproveita, em vez de refazer os desfoques a cada quadro do mergulho)
+      const fixa = document.createElementNS(NSX, 'svg');
+      fixa.setAttribute('viewBox', copoSvg.getAttribute('viewBox'));
+      fixa.setAttribute('aria-hidden', 'true');
+      fixa.classList.add('copao-frente', 'copao-fixa');
+      const respingosEl = frente.querySelector('#respingos');
+      while (respingosEl && respingosEl.nextSibling) fixa.appendChild(respingosEl.nextSibling);
+      const camada = document.createElement('canvas');
+      camada.className = 'copao-gelo';
+      copoSvg.after(camada, frente, fixa);
+      copoSvg.parentNode.classList.add('copo-3d');
 
-    // caixa do bloco em unidades do SVG, com folga para os cantos quando ele gira
-    const BX = 100, BY = 190;
-    // o canvas da camada cobre o copo e sobra para cima, onde o bloco aparece antes de entrar
-    const TOPO = 60;
-    const cena2 = new THREE.Scene();
-    const pm2 = new THREE.PMREMGenerator(r2);
-    cena2.environment = pm2.fromScene(new RoomEnvironment(), 0.04).texture;
-    pm2.dispose();
-    const corpo2 = corpo.clone();
-    cena2.add(luz.clone(), contraluz.clone(), corpo2);
-    const cam2 = new THREE.OrthographicCamera(-BX, BX, BY, -BY, -500, 500);
-    const cc = camada.getContext('2d');
-    let k = 1, d = 1, chave2 = '', vb = { x: 150, y: 250, w: 300, h: 545 };
-    const medirCopo = () => {
-      const r = copoSvg.getBoundingClientRect(), pai = copoSvg.parentNode.getBoundingClientRect();
-      if (!r.width) return;
-      const topo = r.top - pai.top, esq = r.left - pai.left;
-      const [x, y, w, h] = copoSvg.getAttribute('viewBox').split(/\s+/).map(Number);
-      vb = { x, y, w, h };
-      k = r.width / w;
-      d = Math.min(leve ? 1 : 2, devicePixelRatio || 1);
-      Object.assign(camada.style, { top: `${topo - (y - TOPO) * k}px`, left: `${esq}px`, width: `${r.width}px`, height: `${(h + y - TOPO) * k}px` });
-      [frente, fixa].forEach((el) => Object.assign(el.style, { top: `${topo}px`, left: `${esq}px`, width: `${r.width}px`, height: `${r.height}px` }));
-      const cw = Math.round(r.width * d), ch = Math.round((h + y - TOPO) * k * d);
-      if (camada.width === cw && camada.height === ch) return;
-      camada.width = cw; camada.height = ch;
-      r2.setPixelRatio(1);
-      r2.setSize(Math.round(2 * BX * k * d), Math.round(2 * BY * k * d), false);
-      chave2 = '';
-    };
-    medirCopo();
-    addEventListener('resize', medirCopo);
-    addEventListener('load', medirCopo);
-    new ResizeObserver(medirCopo).observe(copoSvg);
-    // unidades do SVG -> pixels do canvas da camada
-    const px = (vx) => (vx - vb.x) * k * d, py = (vy) => (vy - TOPO) * k * d;
-    window.__gelo3d.recopo = () => { chave2 = ''; };
-    window.__gelo3d.copo = (e) => {
-      const chave = `${e.rx.toFixed(3)}|${e.ry.toFixed(3)}|${e.rz.toFixed(3)}|${e.gy.toFixed(1)}|${e.nivel.toFixed(1)}|${e.oculto}`;
-      if (chave === chave2) return;
-      chave2 = chave;
-      cc.clearRect(0, 0, camada.width, camada.height);
-      if (e.oculto) return;
-      corpo2.rotation.set(e.rx, e.ry, e.rz, 'YXZ');
-      r2.render(cena2, cam2);
-      const lw = 2 * BX * k * d, lh = 2 * BY * k * d;
-      const corte = py(e.nivel);
-      // o gelo nunca sai das paredes do vidro: acima da borda ele pode sobrar, abaixo dela fica dentro do copo
-      const vidro = new Path2D();
-      vidro.moveTo(px(vb.x - 400), py(TOPO)); vidro.lineTo(px(vb.x + vb.w + 400), py(TOPO));
-      vidro.lineTo(px(vb.x + vb.w + 400), py(423)); vidro.lineTo(px(404), py(423));
-      vidro.lineTo(px(381), py(742)); vidro.quadraticCurveTo(px(300), py(756), px(219), py(742));
-      vidro.lineTo(px(196), py(423)); vidro.lineTo(px(vb.x - 400), py(423)); vidro.closePath();
-      cc.save();
-      cc.clip(vidro);
-      // acima do drink
-      cc.save();
-      cc.beginPath(); cc.rect(0, 0, camada.width, corte); cc.clip();
-      cc.drawImage(telaCopo, px(e.x - BX), py(e.gy - BY), lw, lh);
-      cc.restore();
-      // submerso: deslocado e um pouco maior, como o SVG fazia
-      cc.save();
-      cc.beginPath(); cc.rect(0, corte, camada.width, camada.height - corte); cc.clip();
-      cc.globalAlpha = 0.92;
-      cc.drawImage(telaCopo, px(e.x + 5 - BX * 1.04), py(e.gy + 3 - BY * 1.02), lw * 1.04, lh * 1.02);
-      cc.restore();
-      cc.restore();
-    };
+      // caixa do bloco em unidades do SVG, com folga para os cantos quando ele gira
+      const BX = 100, BY = 190;
+      // o canvas da camada cobre o copo e sobra para cima, onde o bloco aparece antes de entrar
+      const TOPO = 60;
+      const cena2 = new THREE.Scene();
+      const pm2 = new THREE.PMREMGenerator(r2);
+      cena2.environment = pm2.fromScene(new RoomEnvironment(), 0.04).texture;
+      pm2.dispose();
+      const corpo2 = corpo.clone();
+      cena2.add(luz.clone(), contraluz.clone(), corpo2);
+      const cam2 = new THREE.OrthographicCamera(-BX, BX, BY, -BY, -500, 500);
+      const cc = camada.getContext('2d');
+      let k = 1, d = 1, chave2 = '', vb = { x: 150, y: 250, w: 300, h: 545 };
+      const medirCopo = () => {
+        const r = copoSvg.getBoundingClientRect(), pai = copoSvg.parentNode.getBoundingClientRect();
+        if (!r.width) return;
+        const topo = r.top - pai.top, esq = r.left - pai.left;
+        const [x, y, w, h] = copoSvg.getAttribute('viewBox').split(/\s+/).map(Number);
+        vb = { x, y, w, h };
+        k = r.width / w;
+        d = Math.min(leve ? 1 : 2, devicePixelRatio || 1);
+        Object.assign(camada.style, { top: `${topo - (y - TOPO) * k}px`, left: `${esq}px`, width: `${r.width}px`, height: `${(h + y - TOPO) * k}px` });
+        [frente, fixa].forEach((el) => Object.assign(el.style, { top: `${topo}px`, left: `${esq}px`, width: `${r.width}px`, height: `${r.height}px` }));
+        const cw = Math.round(r.width * d), ch = Math.round((h + y - TOPO) * k * d);
+        if (camada.width === cw && camada.height === ch) return;
+        camada.width = cw; camada.height = ch;
+        r2.setPixelRatio(1);
+        r2.setSize(Math.round(2 * BX * k * d), Math.round(2 * BY * k * d), false);
+        chave2 = '';
+      };
+      medirCopo();
+      addEventListener('resize', medirCopo);
+      addEventListener('load', medirCopo);
+      new ResizeObserver(medirCopo).observe(copoSvg);
+      // unidades do SVG -> pixels do canvas da camada
+      const px = (vx) => (vx - vb.x) * k * d, py = (vy) => (vy - TOPO) * k * d;
+      window.__gelo3d.recopo = () => { chave2 = ''; };
+      window.__gelo3d.copo = (e) => {
+        const chave = `${e.rx.toFixed(3)}|${e.ry.toFixed(3)}|${e.rz.toFixed(3)}|${e.gy.toFixed(1)}|${e.nivel.toFixed(1)}|${e.rySup.toFixed(1)}|${e.oculto}`;
+        if (chave === chave2) return;
+        chave2 = chave;
+        cc.clearRect(0, 0, camada.width, camada.height);
+        if (e.oculto) return;
+        corpo2.rotation.set(e.rx, e.ry, e.rz, 'YXZ');
+        r2.render(cena2, cam2);
+        const lw = 2 * BX * k * d, lh = 2 * BY * k * d;
+        const corte = py(e.nivel);
+        // o gelo nunca sai das paredes do vidro: acima da borda ele pode sobrar, abaixo dela fica dentro do copo
+        const vidro = new Path2D();
+        vidro.moveTo(px(vb.x - 400), py(TOPO)); vidro.lineTo(px(vb.x + vb.w + 400), py(TOPO));
+        vidro.lineTo(px(vb.x + vb.w + 400), py(423)); vidro.lineTo(px(404), py(423));
+        vidro.lineTo(px(381), py(742)); vidro.quadraticCurveTo(px(300), py(756), px(219), py(742));
+        vidro.lineTo(px(196), py(423)); vidro.lineTo(px(vb.x - 400), py(423)); vidro.closePath();
+        cc.save();
+        cc.clip(vidro);
+        // a divisao segue a borda da frente da superficie (curva), nao uma linha reta no nivel:
+        // a reta deixava um degrau visivel entre ela e a curva do suco
+        const cx = px(300), rx = e.mw * k * d, ry = Math.max(0.5, e.rySup * k * d);
+        const acima = new Path2D();
+        acima.moveTo(0, 0); acima.lineTo(camada.width, 0); acima.lineTo(camada.width, corte); acima.lineTo(cx + rx, corte);
+        acima.ellipse(cx, corte, rx, ry, 0, 0, Math.PI); acima.lineTo(0, corte); acima.closePath();
+        const abaixo = new Path2D();
+        abaixo.moveTo(0, corte); abaixo.lineTo(cx - rx, corte); abaixo.ellipse(cx, corte, rx, ry, 0, Math.PI, 0, true);
+        abaixo.lineTo(camada.width, corte); abaixo.lineTo(camada.width, camada.height); abaixo.lineTo(0, camada.height); abaixo.closePath();
+        cc.save();
+        cc.clip(acima);
+        cc.drawImage(telaCopo, px(e.x - BX), py(e.gy - BY), lw, lh);
+        cc.restore();
+        // submerso: um pouco mais largo, centrado no bloco e esticado a partir da superficie (sem deslocar para o lado,
+        // senao a borda de baixo sai da borda de cima e vira uma faixa)
+        cc.save();
+        cc.clip(abaixo);
+        cc.globalAlpha = 0.92;
+        const yTopo = py(e.gy - BY);
+        cc.drawImage(telaCopo, px(e.x) - (lw * 1.03) / 2, corte + (yTopo - corte) * 1.02, lw * 1.03, lh * 1.02);
+        cc.restore();
+        cc.restore();
+      };
+    }
   }
+  window.__gelo3d.copo = (e) => { iniciarCopo(); if (window.__gelo3d.copo) window.__gelo3d.copo(e); };
+  if ('requestIdleCallback' in window) requestIdleCallback(iniciarCopo, { timeout: 2500 }); else setTimeout(iniciarCopo, 1500);
+
   // avisa o hero.js (que carregou antes) para mandar o sabor que já estiver escolhido
   dispatchEvent(new Event('gelo3d-pronto'));
 }

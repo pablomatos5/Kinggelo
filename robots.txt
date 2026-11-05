@@ -1,3 +1,4 @@
 User-agent: *
 Disallow: /admin/
 Disallow: /api/
+Sitemap: https://kinggelo.com.br/sitemap.xml

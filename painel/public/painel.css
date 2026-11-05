@@ -120,7 +120,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 .lista { display: grid; gap: 10px; }
 .linha-item {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
   padding: 14px 16px; border-radius: 16px; background: #fff; box-shadow: var(--sombra);
   text-decoration: none; color: inherit;
 }
@@ -158,7 +158,8 @@ a.linha-item:hover { outline: 2px solid var(--azul); }
 .sabor-cartao .qtd small { font-family: var(--corpo); font-size: .8rem; color: var(--suave); font-weight: 600; }
 .sabor-cartao.baixo .qtd { color: var(--vermelho); }
 .sabor-cartao .acoes { grid-column: 1 / -1; }
-.passador { display: grid; grid-template-columns: 36px 1fr 36px; gap: 6px; align-items: center; margin-top: 6px; }
+.passador { display: grid; grid-template-columns: 40px minmax(48px, 1fr) 40px; gap: 6px; align-items: center; }
+.sabor-cartao > .passador { grid-column: 1 / -1; }
 .passador button { height: 36px; border-radius: 10px; border: 0; background: #e6eef9; color: var(--marinho); font-weight: 800; font-size: 1.1rem; cursor: pointer; }
 .passador input { width: 100%; height: 36px; text-align: center; border-radius: 10px; border: 1.5px solid var(--linha); font-weight: 800; font-size: 1.05rem; }
 .sabor-cartao.tem { outline: 2.5px solid var(--cor); }
@@ -257,7 +258,7 @@ dialog::backdrop { background: rgba(8, 25, 55, .55); backdrop-filter: blur(3px);
 .faixa-mais15 strong { color: var(--vermelho); }
 .linha-item a.titulo { text-decoration: none; }
 .linha-item a.titulo:hover { text-decoration: underline; }
-.linha-item .dir { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+.linha-item .dir { display: flex; align-items: center; gap: 6px 10px; justify-content: flex-end; flex-wrap: wrap; max-width: 260px; }
 .btn-zap { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #25d366; color: #fff; flex: none; }
 .btn-zap .ic { width: 20px; height: 20px; }
 .btn-zap:hover { filter: brightness(.92); }
@@ -287,4 +288,72 @@ dialog::backdrop { background: rgba(8, 25, 55, .55); backdrop-filter: blur(3px);
 .login { padding-top: calc(24px + env(safe-area-inset-top)); }
 @media (display-mode: standalone) {
   body { overscroll-behavior-y: none; }
+}
+
+/* ---------- correções e telas novas ---------- */
+/* barras com valor em reais: a coluna do valor cabe o "R$ 1.736,00" inteiro */
+.barras-vendas .linha.linha-valor { grid-template-columns: 120px minmax(0, 1fr) minmax(92px, auto); }
+.barras-vendas .linha.linha-valor span:last-child { white-space: nowrap; }
+.tag.parcial { background: #fff0d6; color: #a45a00; }
+.tag.entrega { background: #e0f2ff; color: #0868a8; }
+.tag.atrasada { background: #ffe1e3; color: #b3121b; }
+.selo-lead { background: #8e44c9 !important; }
+.sabor-cartao.fora { opacity: .6; }
+.sabor-cartao.fora img, .sabor-cartao.fora .sabor-sem-foto { filter: grayscale(1); }
+/* produto sem foto: saquinho desenhado na cor dele */
+.sabor-sem-foto { width: 54px; height: 100px; display: grid; place-items: center; border-radius: 14px 14px 22px 22px; color: #fff; font-family: var(--display); font-size: 1.6rem;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cor) 70%, #fff), var(--cor)); box-shadow: inset 0 -10px 0 rgba(0, 0, 0, .12), 0 6px 8px rgba(0, 0, 0, .18); }
+.btn-x { width: 30px; height: 30px; border: 0; border-radius: 50%; background: #f1f4f9; color: var(--suave); font-size: 1.2rem; line-height: 1; cursor: pointer; flex: none; }
+.btn-x:hover { background: #ffe1e3; color: var(--vermelho); }
+.divisor { border: 0; border-top: 1px solid var(--linha); width: 100%; margin: 4px 0; }
+.lista-backups { display: flex; flex-wrap: wrap; gap: 8px; }
+/* para entregar: um bloco por dia */
+.grupo-dia { margin-bottom: 18px; }
+.grupo-titulo { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; font-size: 1.05rem; font-weight: 800; color: var(--marinho); text-transform: capitalize; }
+.grupo-titulo small { font-size: .85rem; font-weight: 600; color: var(--suave); text-transform: none; }
+.grupo-titulo.atrasado { color: var(--vermelho); }
+/* financeiro */
+.mes-nav { display: flex; align-items: center; gap: 12px; margin: -4px 0 14px; }
+.mes-nav strong { font-size: 1.1rem; color: var(--marinho); text-transform: capitalize; min-width: 150px; text-align: center; }
+.meses-grafico { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; align-items: end; }
+.mes-col { display: grid; justify-items: center; gap: 4px; text-decoration: none; color: var(--suave); padding: 6px 2px; border-radius: 12px; }
+.mes-col.atual { background: #eef6fe; }
+.mes-col .barras { display: flex; align-items: flex-end; gap: 4px; height: 110px; }
+.mes-col .barras i { display: block; width: 12px; min-height: 2px; border-radius: 6px 6px 2px 2px; }
+.mes-col small { font-size: .78rem; font-weight: 700; text-transform: capitalize; }
+.mes-col strong { font-size: .74rem; color: #12733a; white-space: nowrap; }
+.mes-col strong.neg { color: var(--vermelho); }
+.meses-grafico .v, .legenda .v { background: var(--azul); }
+.meses-grafico .g, .legenda .g { background: var(--vermelho); }
+.legenda { margin: 10px 0 0; font-size: .82rem; }
+.legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin: 0 4px 0 8px; vertical-align: -1px; }
+@media (max-width: 860px) {
+  .linha-item .dir { max-width: none; justify-content: flex-start; }
+  .barras-vendas .linha.linha-valor { grid-template-columns: 84px minmax(0, 1fr) minmax(84px, auto); }
+  /* 3: tabela de movimentações no celular vira uma lista (antes cortava Qtd e Motivo) */
+  .tabela.tabela-empilha { display: block; overflow: visible; white-space: normal; }
+  .tabela-empilha thead { display: none; }
+  .tabela-empilha tbody { display: grid; gap: 8px; }
+  .tabela-empilha tr { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 12px; border-radius: 12px; background: #f6f9fd; }
+  .tabela-empilha td { padding: 0; border: 0; }
+  .tabela-empilha td[data-rotulo="Quando"] { grid-column: 1 / -1; font-size: .78rem; color: var(--suave); }
+  .tabela-empilha td[data-rotulo="Sabor"] { font-weight: 800; color: var(--marinho); }
+  .tabela-empilha td[data-rotulo="Qtd"] { grid-row: 2; grid-column: 2; font-weight: 800; font-size: 1.05rem; }
+  .tabela-empilha td[data-rotulo="Tipo"], .tabela-empilha td[data-rotulo="Motivo"] { grid-column: 1 / -1; font-size: .85rem; color: var(--suave); }
+  .tabela-empilha td[data-rotulo="Tipo"]::after { content: ""; }
+  .nav-baixo a span { font-size: .66rem; }
+  .meses-grafico { gap: 4px; }
+  .mes-col .barras i { width: 9px; }
+}
+@media print {
+  .grupo-dia { break-inside: avoid; }
+  .chips, .mes-nav, .btn-x { display: none !important; }
+}
+
+/* cartão estreito (duas colunas no computador): as etiquetas e o valor descem para a linha de baixo,
+   em vez de espremer o nome do cliente numa coluna de uma palavra por linha */
+.cartao { container-type: inline-size; }
+@container (max-width: 560px) {
+  .linha-item { grid-template-columns: auto minmax(0, 1fr); }
+  .linha-item .dir { grid-column: 2; justify-content: flex-start; max-width: none; text-align: left; }
 }
