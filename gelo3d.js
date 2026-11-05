@@ -226,7 +226,38 @@ if (renderer && queda) {
   medir();
   addEventListener('resize', medir);
 
-  window.__gelo3d = {
+  // ---------- pré-aquecimento ----------
+  // O celular só compila os efeitos do gelo (vidro, brilho, reflexo) e só sobe as texturas para a placa de vídeo
+  // no primeiro quadro em que ele aparece. Era isso que travava o gelo ao sair da embalagem e ao entrar no copo,
+  // só na primeira visita (depois o navegador guarda os efeitos prontos). Aqui tudo é feito antes: o hero.js só
+  // recebe o __gelo3d (e só começa a espremer o saquinho) quando a queda e o copo já estão prontos.
+  const ceder = () => new Promise((ok) => setTimeout(ok, 0));
+  const texturasDe = (cenaX) => {
+    const todas = new Set();
+    cenaX.traverse((o) => {
+      [].concat(o.material || []).forEach((m) => Object.values(m).forEach((v) => { if (v && v.isTexture) todas.add(v); }));
+    });
+    return [...todas];
+  };
+  async function aquecer(r, cenaX, cam) {
+    // compileAsync usa a compilação em paralelo do navegador quando existe (não trava a página)
+    try { if (r.compileAsync) await r.compileAsync(cenaX, cam); else r.compile(cenaX, cam); } catch (e) {}
+    texturasDe(cenaX).forEach((tx) => { try { r.initTexture(tx); } catch (e) {} });
+  }
+  async function aquecerQueda() {
+    // tudo visível e dentro da câmera, para o compile pegar todos os programas (o rastro só existe fora do modo leve)
+    ecos.forEach((m) => { m.visible = !leve; m.material.opacity = 0.2; m.position.set(0, 0, -4); });
+    corpo.position.set(0, 0, 0);
+    sombra.position.set(0, 0, -120);
+    sombra.scale.set(150, 360, 1);
+    await aquecer(renderer, cena, camera);
+    // um quadro de verdade (monta o estado de desenho) e limpa na mesma hora: nada chega a aparecer na tela
+    renderer.render(cena, camera);
+    renderer.clear();
+    ecos.forEach((m) => { m.visible = false; });
+  }
+
+  const api = {
     // estado: { x, y, esc, aperta, estica, rx, ry, rz, atraso, eco } em pixels de tela e radianos
     desenhar(e) {
       if (!e) {
@@ -260,28 +291,30 @@ if (renderer && queda) {
       renderer.render(cena, camera);
     },
   };
-  queda.classList.add('tem-3d');
-
   // troca de sabor: refaz a textura do suco congelado e as cores do miolo e do brilho
-  window.__gelo3d.sabor = (sb) => {
+  api.sabor = (sb) => {
     const antiga = matCasca.map;
     const nova = texturaCor(sb);
     [matCasca, ...ecos.map((m) => m.material)].forEach((m) => { m.map = nova; m.sheenColor.set(sb.borda); m.emissive.set(sb.brilho); m.needsUpdate = true; });
     miolo.material.color.set(sb.miolo[0]);
     miolo.material.emissive.set(sb.miolo[1]);
     antiga.dispose();
+    // a textura nova já sobe para a placa de vídeo agora (nas duas telas), e não no próximo quadro do gelo
+    try { renderer.initTexture(nova); } catch (e) {}
+    if (api.subirNoCopo) api.subirNoCopo(nova);
     chave = '';
-    if (window.__gelo3d.recopo) window.__gelo3d.recopo();
+    if (api.recopo) api.recopo();
   };
 
   // ---------- o mesmo bloco dentro do copão ----------
   // preparado a parte, quando o navegador estiver livre (ou na hora, se o copo chegar antes): o segundo WebGL
   // e a segunda luz de ambiente juntos com os da queda travavam o celular por quase 1 s na abertura
   let copoIniciado = false;
+  let aquecimentoCopo = Promise.resolve();
   function iniciarCopo() {
     if (copoIniciado) return;
     copoIniciado = true;
-    delete window.__gelo3d.copo;
+    delete api.copo;
     // o copo é dividido em duas camadas: fundo + drink atrás, e tom do drink + vidro da frente na frente.
     // Entre elas, um canvas recebe o bloco 3D: inteiro acima do nível e, abaixo, deslocado e ampliado (refração).
     const copoSvg = document.getElementById('copao');
@@ -354,8 +387,9 @@ if (renderer && queda) {
       new ResizeObserver(medirCopo).observe(copoSvg);
       // unidades do SVG -> pixels do canvas da camada
       const px = (vx) => (vx - vb.x) * k * d, py = (vy) => (vy - TOPO) * k * d;
-      window.__gelo3d.recopo = () => { chave2 = ''; };
-      window.__gelo3d.copo = (e) => {
+      api.recopo = () => { chave2 = ''; };
+      api.subirNoCopo = (tx) => { try { r2.initTexture(tx); } catch (e) {} };
+      api.copo = (e) => {
         const chave = `${e.rx.toFixed(3)}|${e.ry.toFixed(3)}|${e.rz.toFixed(3)}|${e.gy.toFixed(1)}|${e.nivel.toFixed(1)}|${e.rySup.toFixed(1)}|${e.oculto}`;
         if (chave === chave2) return;
         chave2 = chave;
@@ -396,10 +430,25 @@ if (renderer && queda) {
         cc.restore();
         cc.restore();
       };
+      aquecimentoCopo = aquecer(r2, cena2, cam2).then(() => {
+        corpo2.rotation.set(0, 0, 0);
+        r2.render(cena2, cam2);
+        // a primeira cópia do canvas WebGL para o 2D também custa: faz agora e apaga
+        cc.drawImage(telaCopo, 0, 0, 1, 1);
+        cc.clearRect(0, 0, camada.width, camada.height);
+      });
     }
   }
-  window.__gelo3d.copo = (e) => { iniciarCopo(); if (window.__gelo3d.copo) window.__gelo3d.copo(e); };
-  if ('requestIdleCallback' in window) requestIdleCallback(iniciarCopo, { timeout: 2500 }); else setTimeout(iniciarCopo, 1500);
+  api.copo = (e) => { iniciarCopo(); if (api.copo) api.copo(e); };
+
+  // queda e copo prontos antes de o saquinho começar a espremer (com uma pausa entre eles para a página respirar).
+  // O import() do hero.js só termina depois disto, junto com o __gelo3d.
+  await aquecerQueda();
+  await ceder();
+  iniciarCopo();
+  await aquecimentoCopo;
+  window.__gelo3d = api;
+  queda.classList.add('tem-3d');
 
   // avisa o hero.js (que carregou antes) para mandar o sabor que já estiver escolhido
   dispatchEvent(new Event('gelo3d-pronto'));

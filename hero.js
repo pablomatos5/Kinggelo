@@ -486,8 +486,8 @@
     // a sequência espremer → abrir → soltar roda sozinha logo que a página abre (não depende de rolar);
     // ao fim o bloco fica pendurado na boca do saquinho, e a rolagem só faz ele terminar de sair e cair
     // espera a foto do saquinho (ou no máximo 2,5s, para não travar se a imagem demorar)
-    // espera tambem o gelo 3D ficar pronto (ou desistir), para o bloco nao trocar de versao no meio da queda
-    const pronto3d = window.__gelo3d || window.__gelo3dTentou || t > 4500;
+    // espera tambem o gelo 3D ficar pronto e pre-aquecido (ou desistir), para o bloco nao trocar de versao no meio da queda
+    const pronto3d = window.__gelo3d || window.__gelo3dTentou || t > 8000;
     if (inicioSeq === null && pronto3d && ((foto.complete && foto.naturalWidth) || t > 2500)) inicioSeq = t + 700;
     // durante a troca de sabor a sequência volta ao início: o gelo do sabor anterior some junto com o saquinho
     const p = girando ? 0 : reduzido ? FIM_SEQ : inicioSeq === null ? 0 : clamp((t - inicioSeq) / DUR_SEQ) * FIM_SEQ;
