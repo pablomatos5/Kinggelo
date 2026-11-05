@@ -120,8 +120,20 @@
     }
   }
 
-  let ultimo = performance.now();
+  let ultimo = performance.now(), ultimoCalmo = 0, refGeloY = null, geloMexeu = 0;
   function quadro(t) {
+    // calmo = o gelo nao esta se movendo (balancar no lugar nao conta) e nenhuma borda na tela tem gotas:
+    // ai a ondulacao e a lingua parada no gelo ficam boas a ~25 quadros por segundo
+    const g0 = window.__gelo;
+    const gy = g0 && g0.visivel ? g0.y : null;
+    if (gy === null) refGeloY = null;  // gelo fora da queda (no saquinho ou no copo): nao agita borda nenhuma
+    else if (refGeloY === null || Math.abs(gy - refGeloY) > 6) { refGeloY = gy; geloMexeu = t; }
+    const calmo = t - geloMexeu > 500 && bordas.every((b) => {
+      const y = b.topoDoc - scrollY;
+      return y < -H * 2 || y > innerHeight + H * 2 || !b.gotas.length;
+    });
+    if (calmo && t - ultimoCalmo < 38) { setTimeout(() => requestAnimationFrame(quadro), 40 - (t - ultimoCalmo)); return; }
+    ultimoCalmo = t;
     const dt = Math.min(0.033, (t - ultimo) / 1000);
     ultimo = t;
     const g = window.__gelo;

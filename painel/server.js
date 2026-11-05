@@ -6,20 +6,27 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
-const { abrirBanco } = require('./banco');
-const { rotas } = require('./api');
+const { abrirBanco, transacao, UNIDADES } = require('./banco');
+const UNIDADE_IDS = new Set(UNIDADES.map((u) => u.id));
+const NOME_UNIDADE = Object.fromEntries(UNIDADES.map((u) => [u.id, u.nome]));
+const ORIGENS_CONTATO = new Set(['revender', 'sabor', 'pedido', 'entrega', 'aparecer', 'contato']);
+const { rotas, semDinheiro } = require('./api');
+const backup = require('./backup');
 
 const PORTA = +process.env.PORT || 8090;
 const RAIZ_SITE = path.resolve(__dirname, '..');
 const RAIZ_PAINEL = path.join(__dirname, 'public');
 const HTTPS = process.env.KG_HTTPS === '1';           // atrás do nginx com certificado
-const SESSAO_DIAS = 14;
+// "Manter conectado": 60 dias, renovados enquanto o painel é usado. Sem ele: some ao fechar o navegador ou após 12 h parado.
+const LEMBRAR_MS = 60 * 86400000;
+const CURTA_MS = 12 * 3600000;
 const db = abrirBanco();
 
 const TIPOS = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png',
   '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.mp4': 'video/mp4', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8',
 };
 
 // ---------- senhas e sessões ----------
@@ -36,10 +43,10 @@ function conferirSenha(senha, guardado) {
 }
 const hashToken = (t) => crypto.createHash('sha256').update(t).digest('hex');
 
-function criarSessao(usuarioId) {
+function criarSessao(usuarioId, lembrar) {
   const token = crypto.randomBytes(32).toString('base64url');
-  const expira = new Date(Date.now() + SESSAO_DIAS * 86400000).toISOString();
-  db.prepare('INSERT INTO sessoes (token_hash, usuario_id, expira_em) VALUES (?, ?, ?)').run(hashToken(token), usuarioId, expira);
+  const expira = new Date(Date.now() + (lembrar ? LEMBRAR_MS : CURTA_MS)).toISOString();
+  db.prepare('INSERT INTO sessoes (token_hash, usuario_id, expira_em, lembrar) VALUES (?, ?, ?, ?)').run(hashToken(token), usuarioId, expira, lembrar ? 1 : 0);
   db.prepare("DELETE FROM sessoes WHERE expira_em < ?").run(new Date().toISOString());
   return token;
 }
@@ -49,12 +56,20 @@ function lerCookies(req) {
 function usuarioDaSessao(req) {
   const t = lerCookies(req).kg_sessao;
   if (!t) return null;
-  const s = db.prepare('SELECT u.id, u.usuario, s.expira_em, s.token_hash FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id WHERE s.token_hash = ?').get(hashToken(t));
+  const s = db.prepare('SELECT u.id, u.usuario, u.papel, s.expira_em, s.token_hash, s.lembrar FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id WHERE s.token_hash = ?').get(hashToken(t));
   if (!s || s.expira_em < new Date().toISOString()) return null;
-  return s;
+  return { ...s, token: t };
 }
+// estica o prazo de quem está usando o painel (no máximo uma gravação por hora); devolve o cookie novo quando é lembrada
+function renovarSessao(s) {
+  const dur = s.lembrar ? LEMBRAR_MS : CURTA_MS;
+  if (Date.parse(s.expira_em) - Date.now() > dur - 3600000) return null;
+  db.prepare('UPDATE sessoes SET expira_em = ? WHERE token_hash = ?').run(new Date(Date.now() + dur).toISOString(), s.token_hash);
+  return s.lembrar ? cookieSessao(s.token, dur / 1000) : null;
+}
+// sem maxAge o cookie é de sessão: o navegador apaga ao fechar
 function cookieSessao(token, maxAge) {
-  return `kg_sessao=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${HTTPS ? '; Secure' : ''}`;
+  return `kg_sessao=${token}; Path=/; HttpOnly; SameSite=Strict${maxAge == null ? '' : `; Max-Age=${maxAge}`}${HTTPS ? '; Secure' : ''}`;
 }
 
 // ---------- limite de tentativas (login e formulário público) ----------
@@ -104,8 +119,8 @@ const SEGURANCA = {
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Content-Security-Policy': [
-    "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self'", "connect-src 'self'",
+    "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'", "img-src 'self' data: blob:", "media-src 'self'", "connect-src 'self'",
     "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'",
   ].join('; '),
 };
@@ -115,7 +130,7 @@ if (HTTPS) {
 }
 
 // texto (html/css/js/svg/json) vai comprimido; a versão comprimida fica em memória até o arquivo mudar
-const COMPRIMIVEL = new Set(['.html', '.css', '.js', '.svg', '.json', '.txt', '.webmanifest']);
+const COMPRIMIVEL = new Set(['.html', '.css', '.js', '.svg', '.json', '.txt', '.xml', '.webmanifest']);
 const comprimidos = new Map();
 function comprimido(alvo, etag, tipo) {
   const chave = `${alvo}|${tipo}`;
@@ -140,8 +155,12 @@ function servirArquivo(res, raiz, rel, req) {
   if (st.isDirectory()) return servirArquivo(res, raiz, path.posix.join(rel, 'index.html'), req);
   const ext = path.extname(alvo).toLowerCase();
   const etag = `"${st.size.toString(36)}-${st.mtimeMs.toString(36)}"`;
-  // html/css/js sempre revalidam (ETag); imagens ficam 1 dia no cache
-  const cache = /\/img\//.test(alvo) ? 'public, max-age=86400' : 'no-cache';
+  // html/css/js sempre revalidam (ETag): mudanca no codigo aparece na hora. Fontes e a biblioteca 3D nao mudam
+  // (1 ano). Imagens ficam 30 dias no aparelho: ao TROCAR uma imagem, salve com nome novo, senao quem ja visitou
+  // continua vendo a antiga. (Antes o teste era por "/img/" no caminho e falhava no Windows, que usa "\".)
+  const pasta = raiz === RAIZ_SITE ? relativo[0] : '';
+  const cache = pasta === 'fontes' || pasta === 'vendor' ? 'public, max-age=31536000, immutable'
+    : pasta === 'img' ? 'public, max-age=2592000' : 'no-cache';
   const base = { ...SEGURANCA, ETag: etag, 'Cache-Control': cache };
   if (req.headers['if-none-match'] === etag) { res.writeHead(304, base); res.end(); return true; }
   const aceita = String(req.headers['accept-encoding'] || '');
@@ -179,7 +198,7 @@ const servidor = http.createServer(async (req, res) => {
       if (caminho === '/api/login' && metodo === 'POST') {
         // só as tentativas erradas contam: quem entra certo várias vezes (vários aparelhos) não fica bloqueado
         if (limitar('login:' + ip, 8, 15 * 60000, false)) return json(res, 429, { erro: 'Muitas tentativas. Espere alguns minutos.' });
-        const { usuario, senha } = await lerCorpo(req);
+        const { usuario, senha, lembrar: lembrarPedido } = await lerCorpo(req);
         const u = db.prepare('SELECT * FROM usuarios WHERE usuario = ?').get(String(usuario || '').trim().toLowerCase());
         // usuário inexistente também passa pelo scrypt: o tempo de resposta não revela quais usuários existem
         const confere = conferirSenha(String(senha || ''), u ? u.senha_hash : HASH_FALSO);
@@ -187,7 +206,8 @@ const servidor = http.createServer(async (req, res) => {
           limitar('login:' + ip, 8, 15 * 60000);
           return json(res, 401, { erro: 'Usuário ou senha incorretos' });
         }
-        return json(res, 200, { ok: true, usuario: u.usuario }, { 'Set-Cookie': cookieSessao(criarSessao(u.id), SESSAO_DIAS * 86400) });
+        const lembrar = lembrarPedido !== false;
+        return json(res, 200, { ok: true, usuario: u.usuario }, { 'Set-Cookie': cookieSessao(criarSessao(u.id, lembrar), lembrar ? LEMBRAR_MS / 1000 : null) });
       }
       if (caminho === '/api/sair' && metodo === 'POST') {
         const t = lerCookies(req).kg_sessao;
@@ -203,15 +223,40 @@ const servidor = http.createServer(async (req, res) => {
         if (String(d.site || '').trim() || (d.tempo != null && Number(d.tempo) < 2000)) return json(res, 201, { ok: true });
         const txt = (v, n) => String(v || '').trim().slice(0, n);
         if (!txt(d.nome, 80) || !txt(d.ponto, 120)) return json(res, 400, { erro: 'Nome e estabelecimento são obrigatórios' });
-        db.prepare(`INSERT INTO clientes (nome, estabelecimento, tipo, cidade, telefone, status, origem, volume_informado)
-                    VALUES (?, ?, ?, ?, ?, 'lead', 'site', ?)`)
-          .run(txt(d.nome, 80), txt(d.ponto, 120), txt(d.tipo, 40) || 'Outro', txt(d.cidade, 80), txt(d.telefone, 20).replace(/\D/g, ''), txt(d.volume, 40));
+        const unidade = UNIDADE_IDS.has(d.unidade) ? d.unidade : 'cameta';
+        transacao(db, () => {
+          db.prepare(`INSERT INTO clientes (nome, estabelecimento, tipo, cidade, telefone, status, origem, volume_informado, unidade)
+                      VALUES (?, ?, ?, ?, ?, 'lead', 'site', ?, ?)`)
+            .run(txt(d.nome, 80), txt(d.ponto, 120), txt(d.tipo, 40) || 'Outro', txt(d.cidade, 80), txt(d.telefone, 20).replace(/\D/g, ''), txt(d.volume, 40), unidade);
+          db.prepare("INSERT INTO contatos_site (unidade, origem) VALUES (?, 'formulario')").run(unidade);
+        });
+        return json(res, 201, { ok: true });
+      }
+      // toque num botão de WhatsApp do site: conta para a unidade escolhida (sem dado pessoal nenhum)
+      if (caminho === '/api/publico/contato' && metodo === 'POST') {
+        if (limitar('contato:' + ip, 30, 60 * 60000)) return json(res, 202, { ok: true });
+        const d = await lerCorpo(req, 1024);
+        if (!UNIDADE_IDS.has(d.unidade) || !ORIGENS_CONTATO.has(d.origem)) return json(res, 400, { erro: 'Contato inválido' });
+        db.prepare('INSERT INTO contatos_site (unidade, origem, detalhe) VALUES (?, ?, ?)')
+          .run(d.unidade, d.origem, String(d.detalhe || '').trim().slice(0, 40));
         return json(res, 201, { ok: true });
       }
 
       const usuario = usuarioDaSessao(req);
       if (!usuario) return json(res, 401, { erro: 'Faça login' });
-      // downloads: cópia do banco e planilha de pedidos
+      const cookieNovo = renovarSessao(usuario);
+      if (cookieNovo) res.setHeader('Set-Cookie', cookieNovo);
+      const dono = usuario.papel === 'dono';
+      // downloads (só o dono): cópia do banco agora, backup automático de um dia e planilha de pedidos
+      if (metodo === 'GET' && (caminho === '/api/backup' || caminho.startsWith('/api/backups/') || caminho.startsWith('/api/exportar/')) && !dono) {
+        return json(res, 403, { erro: 'Só o dono pode baixar os dados' });
+      }
+      if (metodo === 'GET' && caminho.startsWith('/api/backups/')) {
+        const arq = backup.arquivo(caminho.slice('/api/backups/'.length));
+        if (!arq || !fs.existsSync(arq)) return json(res, 404, { erro: 'Backup não encontrado' });
+        res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${path.basename(arq)}"`, 'Cache-Control': 'no-store' });
+        return fs.createReadStream(arq).pipe(res);
+      }
       if (metodo === 'GET' && caminho === '/api/backup') {
         const tmp = path.join(require('node:os').tmpdir(), `kinggelo-${Date.now()}.db`);
         db.exec(`VACUUM INTO '${tmp.replace(/'/g, "''")}'`);
@@ -221,7 +266,8 @@ const servidor = http.createServer(async (req, res) => {
       }
       if (metodo === 'GET' && caminho === '/api/exportar/pedidos.csv') {
         const linhas = db.prepare(`
-          SELECT p.id, p.criado_em, p.status, p.pagamento, p.pago, c.estabelecimento, c.nome, c.cidade, c.telefone,
+          SELECT p.id, p.criado_em, p.entrega_em, p.status, p.pagamento, p.pago, c.estabelecimento, c.nome, c.cidade, c.telefone, c.unidade,
+                 (SELECT COALESCE(SUM(valor), 0) FROM pagamentos WHERE pedido_id = p.id) AS recebido,
                  pr.nome AS sabor, i.quantidade, i.preco_unit
           FROM pedidos p JOIN clientes c ON c.id = p.cliente_id
           JOIN itens_pedido i ON i.pedido_id = p.id JOIN produtos pr ON pr.id = i.produto_id
@@ -234,20 +280,24 @@ const servidor = http.createServer(async (req, res) => {
           return `"${t.replace(/"/g, '""')}"`;
         };
         const valor = (c) => (c / 100).toFixed(2).replace('.', ',');
-        const csv = ['Pedido;Data;Situação;Pagamento;Pago;Estabelecimento;Responsável;Cidade;WhatsApp;Sabor;Quantidade;Preço unitário;Total']
-          .concat(linhas.map((l) => [l.id, l.criado_em, l.status, l.pagamento, l.pago ? 'sim' : 'não', l.estabelecimento, l.nome, l.cidade, l.telefone,
+        // "Recebido no pedido" se repete em cada sabor do mesmo pedido (é do pedido todo, não da linha)
+        const csv = ['Pedido;Data;Entrega marcada;Situação;Pagamento;Pago;Recebido no pedido;Unidade;Estabelecimento;Responsável;Cidade;WhatsApp;Sabor;Quantidade;Preço unitário;Total']
+          .concat(linhas.map((l) => [l.id, l.criado_em, l.entrega_em || '', l.status, l.pagamento, l.pago ? 'sim' : 'não', valor(l.recebido), NOME_UNIDADE[l.unidade] || l.unidade, l.estabelecimento, l.nome, l.cidade, l.telefone,
             l.sabor, l.quantidade, valor(l.preco_unit), valor(l.quantidade * l.preco_unit)].map(cel).join(';'))).join('\r\n');
         res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="pedidos-kinggelo-${new Date().toISOString().slice(0, 10)}.csv"`, 'Cache-Control': 'no-store' });
         return res.end('\ufeff' + csv);
       }
-      for (const [m, padrao, fn] of rotas) {
+      for (const [m, padrao, fn, so] of rotas) {
         if (m !== metodo) continue;
         const achou = caminho.match(padrao);
         if (!achou) continue;
+        // rotas marcadas 'dono' (dinheiro, acessos, ajustes) não abrem para a equipe
+        if (so === 'dono' && !dono) return json(res, 403, { erro: 'Só o dono pode fazer isso' });
         const corpo = metodo === 'GET' ? {} : await lerCorpo(req);
         const r = fn({ db, params: achou.slice(1), corpo, query: url.searchParams, usuario, hashSenha, conferirSenha });
-        // rotas que criam algo devolvem { http: 201, corpo }
-        return r && r.http ? json(res, r.http, r.corpo) : json(res, 200, r);
+        // rotas que criam algo devolvem { http: 201, corpo }; para a equipe os valores em dinheiro saem da resposta
+        const [status, corpoResp] = r && r.http ? [r.http, r.corpo] : [200, r];
+        return json(res, status, dono ? corpoResp : semDinheiro(corpoResp));
       }
       return json(res, 404, { erro: 'Rota não encontrada' });
     }
@@ -278,6 +328,7 @@ servidor.requestTimeout = 30000;
 servidor.keepAliveTimeout = 5000;
 
 if (require.main === module) {
+  backup.agendar(db);
   servidor.listen(PORTA, () => console.log(`King Gelo em http://localhost:${PORTA}  ·  painel em http://localhost:${PORTA}/admin/`));
 }
 module.exports = { db, hashSenha, servidor };

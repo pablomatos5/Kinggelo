@@ -110,6 +110,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .form-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .check { display: flex; align-items: center; gap: 10px; font-weight: 600; }
 .check input { width: 20px; height: 20px; accent-color: var(--azul); }
+.lembrar { font-size: .88rem; color: var(--marinho); cursor: pointer; min-height: 44px; }
 .erro-form { color: var(--vermelho); font-weight: 600; min-height: 1.2em; margin: 0; }
 
 .busca { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -120,7 +121,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 .lista { display: grid; gap: 10px; }
 .linha-item {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
   padding: 14px 16px; border-radius: 16px; background: #fff; box-shadow: var(--sombra);
   text-decoration: none; color: inherit;
 }
@@ -158,7 +159,8 @@ a.linha-item:hover { outline: 2px solid var(--azul); }
 .sabor-cartao .qtd small { font-family: var(--corpo); font-size: .8rem; color: var(--suave); font-weight: 600; }
 .sabor-cartao.baixo .qtd { color: var(--vermelho); }
 .sabor-cartao .acoes { grid-column: 1 / -1; }
-.passador { display: grid; grid-template-columns: 36px 1fr 36px; gap: 6px; align-items: center; margin-top: 6px; }
+.passador { display: grid; grid-template-columns: 40px minmax(48px, 1fr) 40px; gap: 6px; align-items: center; }
+.sabor-cartao > .passador { grid-column: 1 / -1; }
 .passador button { height: 36px; border-radius: 10px; border: 0; background: #e6eef9; color: var(--marinho); font-weight: 800; font-size: 1.1rem; cursor: pointer; }
 .passador input { width: 100%; height: 36px; text-align: center; border-radius: 10px; border: 1.5px solid var(--linha); font-weight: 800; font-size: 1.05rem; }
 .sabor-cartao.tem { outline: 2.5px solid var(--cor); }
@@ -257,7 +259,7 @@ dialog::backdrop { background: rgba(8, 25, 55, .55); backdrop-filter: blur(3px);
 .faixa-mais15 strong { color: var(--vermelho); }
 .linha-item a.titulo { text-decoration: none; }
 .linha-item a.titulo:hover { text-decoration: underline; }
-.linha-item .dir { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+.linha-item .dir { display: flex; align-items: center; gap: 6px 10px; justify-content: flex-end; flex-wrap: wrap; max-width: 260px; }
 .btn-zap { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #25d366; color: #fff; flex: none; }
 .btn-zap .ic { width: 20px; height: 20px; }
 .btn-zap:hover { filter: brightness(.92); }
@@ -288,3 +290,163 @@ dialog::backdrop { background: rgba(8, 25, 55, .55); backdrop-filter: blur(3px);
 @media (display-mode: standalone) {
   body { overscroll-behavior-y: none; }
 }
+
+/* ---------- correções e telas novas ---------- */
+/* barras com valor em reais: a coluna do valor cabe o "R$ 1.736,00" inteiro */
+.barras-vendas .linha.linha-valor { grid-template-columns: 120px minmax(0, 1fr) minmax(92px, auto); }
+.barras-vendas .linha.linha-valor span:last-child { white-space: nowrap; }
+.tag.parcial { background: #fff0d6; color: #a45a00; }
+.tag.entrega { background: #e0f2ff; color: #0868a8; }
+.tag.atrasada { background: #ffe1e3; color: #b3121b; }
+.selo-lead { background: #8e44c9 !important; }
+.sabor-cartao.fora { opacity: .6; }
+.sabor-cartao.fora img, .sabor-cartao.fora .sabor-sem-foto { filter: grayscale(1); }
+/* produto sem foto: saquinho desenhado na cor dele */
+.sabor-sem-foto { width: 54px; height: 100px; display: grid; place-items: center; border-radius: 14px 14px 22px 22px; color: #fff; font-family: var(--display); font-size: 1.6rem;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cor) 70%, #fff), var(--cor)); box-shadow: inset 0 -10px 0 rgba(0, 0, 0, .12), 0 6px 8px rgba(0, 0, 0, .18); }
+.btn-x { width: 30px; height: 30px; border: 0; border-radius: 50%; background: #f1f4f9; color: var(--suave); font-size: 1.2rem; line-height: 1; cursor: pointer; flex: none; }
+.btn-x:hover { background: #ffe1e3; color: var(--vermelho); }
+.divisor { border: 0; border-top: 1px solid var(--linha); width: 100%; margin: 4px 0; }
+.lista-backups { display: flex; flex-wrap: wrap; gap: 8px; }
+/* para entregar: um bloco por dia */
+.grupo-dia { margin-bottom: 18px; }
+.grupo-titulo { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; font-size: 1.05rem; font-weight: 800; color: var(--marinho); text-transform: capitalize; }
+.grupo-titulo small { font-size: .85rem; font-weight: 600; color: var(--suave); text-transform: none; }
+.grupo-titulo.atrasado { color: var(--vermelho); }
+/* financeiro */
+.mes-nav { display: flex; align-items: center; gap: 12px; margin: -4px 0 14px; }
+.mes-nav strong { font-size: 1.1rem; color: var(--marinho); text-transform: capitalize; min-width: 150px; text-align: center; }
+.meses-grafico { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; align-items: end; }
+.mes-col { display: grid; justify-items: center; gap: 4px; text-decoration: none; color: var(--suave); padding: 6px 2px; border-radius: 12px; }
+.mes-col.atual { background: #eef6fe; }
+.mes-col .barras { display: flex; align-items: flex-end; gap: 4px; height: 110px; }
+.mes-col .barras i { display: block; width: 12px; min-height: 2px; border-radius: 6px 6px 2px 2px; }
+.mes-col small { font-size: .78rem; font-weight: 700; text-transform: capitalize; }
+.mes-col strong { font-size: .74rem; color: #12733a; white-space: nowrap; }
+.mes-col strong.neg { color: var(--vermelho); }
+.meses-grafico .v, .legenda .v { background: var(--azul); }
+.meses-grafico .g, .legenda .g { background: var(--vermelho); }
+.legenda { margin: 10px 0 0; font-size: .82rem; }
+.legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin: 0 4px 0 8px; vertical-align: -1px; }
+@media (max-width: 860px) {
+  .linha-item .dir { max-width: none; justify-content: flex-start; }
+  .barras-vendas .linha.linha-valor { grid-template-columns: 84px minmax(0, 1fr) minmax(84px, auto); }
+  /* 3: tabela de movimentações no celular vira uma lista (antes cortava Qtd e Motivo) */
+  .tabela.tabela-empilha { display: block; overflow: visible; white-space: normal; }
+  .tabela-empilha thead { display: none; }
+  .tabela-empilha tbody { display: grid; gap: 8px; }
+  .tabela-empilha tr { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 12px; border-radius: 12px; background: #f6f9fd; }
+  .tabela-empilha td { padding: 0; border: 0; }
+  .tabela-empilha td[data-rotulo="Quando"] { grid-column: 1 / -1; font-size: .78rem; color: var(--suave); }
+  .tabela-empilha td[data-rotulo="Sabor"] { font-weight: 800; color: var(--marinho); }
+  .tabela-empilha td[data-rotulo="Qtd"] { grid-row: 2; grid-column: 2; font-weight: 800; font-size: 1.05rem; }
+  .tabela-empilha td[data-rotulo="Tipo"], .tabela-empilha td[data-rotulo="Motivo"] { grid-column: 1 / -1; font-size: .85rem; color: var(--suave); }
+  .tabela-empilha td[data-rotulo="Tipo"]::after { content: ""; }
+  .nav-baixo a span { font-size: .66rem; }
+  .meses-grafico { gap: 4px; }
+  .mes-col .barras i { width: 9px; }
+}
+@media print {
+  .grupo-dia { break-inside: avoid; }
+  .chips, .mes-nav, .btn-x { display: none !important; }
+}
+
+/* cartão estreito (duas colunas no computador): as etiquetas e o valor descem para a linha de baixo,
+   em vez de espremer o nome do cliente numa coluna de uma palavra por linha */
+.cartao { container-type: inline-size; }
+@container (max-width: 560px) {
+  .linha-item { grid-template-columns: auto minmax(0, 1fr); }
+  .linha-item .dir { grid-column: 2; justify-content: flex-start; max-width: none; text-align: left; }
+}
+
+/* ---------- unidades (Cametá e Tucuruí) ---------- */
+.chips-unidade { margin-top: -6px; }
+
+/* celular: filtros arrumados (antes quebravam em 2-3 linhas tortas) */
+@media (max-width: 640px) {
+  /* situação: uma linha só que desliza de lado; o esmaecido na borda mostra que tem mais */
+  .chips:not(.chips-unidade) {
+    flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none;
+    margin-inline: -16px; padding: 2px 16px; scroll-padding-inline: 16px;
+    /* a largura vem da tela, não da soma dos chips (senão a fila inteira alargava a página) */
+    width: calc(100% + 32px); contain: inline-size;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 32px), transparent);
+  }
+  .chips:not(.chips-unidade)::-webkit-scrollbar { display: none; }
+  .chips .chip { flex: none; white-space: nowrap; scroll-snap-align: start; }
+  /* unidade: seletor de partes iguais */
+  .chips-unidade { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; background: #fff; border: 1.5px solid var(--linha); border-radius: 999px; margin-top: 0; }
+  .chips-unidade .chip { border: 0; text-align: center; padding: 8px 6px; }
+  /* busca: campo e botão sempre na mesma linha */
+  .busca { flex-wrap: nowrap; }
+  .busca input { flex: 1 1 0; width: 0; min-width: 0; }
+  /* estoque: botões de cada sabor em grade 2 × 2, todos do mesmo tamanho */
+  .sabor-cartao .acoes { display: grid; grid-template-columns: 1fr 1fr; }
+  .sabor-cartao .acoes .btn { justify-content: center; text-align: center; }
+}
+.chips-unidade .chip[aria-pressed="true"] { background: var(--azul-escuro); border-color: var(--azul-escuro); }
+.tag.unidade-tag { background: color-mix(in srgb, var(--cor) 14%, #fff); color: color-mix(in srgb, var(--cor) 75%, #000); }
+.cartao-unidade { border-top: 5px solid var(--cor); }
+.cartao-unidade h2 span { display: inline-flex; align-items: center; gap: 8px; font-size: 1.25rem; }
+.cartao-unidade h2 span .ic { color: var(--cor); }
+.cartao-unidade h2 a { display: inline-flex; align-items: center; gap: 6px; }
+.numeros-unidade { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.numeros-unidade div { display: grid; align-content: start; gap: 2px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--cor) 9%, #fff); }
+.numeros-unidade strong { font-family: var(--display); font-size: 1.6rem; line-height: 1.1; color: var(--marinho); overflow-wrap: anywhere; }
+.numeros-unidade span { font-size: .78rem; font-weight: 600; color: var(--suave); }
+.barra-unidade { height: 6px; margin: 14px 0 4px; border-radius: 999px; background: #eef2f8; overflow: hidden; }
+.barra-unidade i { display: block; height: 100%; border-radius: inherit; background: var(--cor); }
+.sub-titulo { margin: 14px 0 10px; font-size: .9rem; font-weight: 800; color: var(--marinho); }
+.sabores-unidade { margin: 12px 0 0; }
+.acoes-unidade { margin-top: 14px; }
+.acoes-unidade .btn { flex: 1 1 auto; justify-content: center; }
+@container (max-width: 560px) {
+  .numeros-unidade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- apresentação do painel (tour): um mascote de gelo explica cada passo num balão ---------- */
+.tour { position: fixed; z-index: 90; right: 20px; bottom: 20px; width: min(500px, calc(100vw - 20px)); pointer-events: none; }
+.tour-cartao { display: grid; grid-template-columns: 118px 1fr; align-items: end; gap: 14px; pointer-events: none; }
+.tour-mascote { pointer-events: none; animation: tour-entra .35s ease-out; }
+.tour-mascote img { display: block; width: 118px; height: 160px; object-fit: cover; object-position: 50% 30%; border-radius: 22px; box-shadow: 0 14px 34px rgba(8, 40, 90, .3), 0 0 0 4px #fff; animation: tour-balanca 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes tour-balanca { 0%, 100% { transform: rotate(-2deg) translateY(0); } 50% { transform: rotate(2deg) translateY(-6px); } }
+.tour-fala { position: relative; pointer-events: auto; background: #fff; border-radius: 20px; padding: 14px 18px 14px; box-shadow: 0 18px 50px rgba(8, 40, 90, .28), 0 0 0 1.5px var(--linha); animation: tour-entra .3s .08s ease-out both; }
+/* o biquinho do balão aponta para o mascote */
+.tour-fala::before { content: ""; position: absolute; left: -11px; bottom: 34px; width: 22px; height: 22px; background: #fff; transform: rotate(45deg); border-left: 1.5px solid var(--linha); border-bottom: 1.5px solid var(--linha); }
+@keyframes tour-entra { from { opacity: 0; transform: translateY(14px) scale(.96); } }
+.tour-cabeca { display: flex; align-items: center; gap: 10px; }
+.tour-passo { font-size: .78rem; font-weight: 700; color: var(--suave); }
+.tour-x { margin-left: auto; width: 34px; height: 34px; margin-right: -6px; border: 0; border-radius: 50%; background: transparent; font-size: 1.5rem; line-height: 1; color: var(--suave); cursor: pointer; }
+.tour h2 { font-family: var(--display); color: var(--marinho); font-size: 1.3rem; line-height: 1.1; margin: 0 0 8px; }
+.tour-texto { position: relative; color: var(--texto); font-size: .94rem; line-height: 1.45; display: grid; gap: 8px; }
+.tour-texto p, .tour-texto ul { margin: 0; }
+.tour-texto b { color: var(--marinho); }
+.tour-destaque { background: #fff5d6; border-radius: 10px; padding: 8px 10px; font-weight: 600; }
+.tour-lista { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.tour-pontos { display: flex; gap: 5px; justify-content: center; margin: 12px 0 10px; }
+.tour-pontos i { width: 7px; height: 7px; border-radius: 50%; background: var(--linha); transition: width .2s, background .2s; }
+.tour-pontos i.ativo { width: 20px; border-radius: 4px; background: var(--azul); }
+.tour-botoes { display: flex; gap: 8px; }
+.tour-botoes .btn { flex: 1; justify-content: center; }
+/* o item do menu do passo atual pulsa, para a pessoa aprender onde fica */
+.tour-alvo { position: relative; box-shadow: 0 0 0 3px #ffc83d; border-radius: 12px; animation: tour-pulsa 1.4s ease-in-out infinite; }
+@keyframes tour-pulsa { 50% { box-shadow: 0 0 0 6px rgba(255, 200, 61, .45); } }
+@media (max-width: 860px) {
+  /* no celular: mascote menor, balão ao lado, tudo logo acima do menu de baixo (que continua à vista) */
+  .tour { left: 8px; right: 8px; width: auto; bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .tour-cartao { grid-template-columns: 76px 1fr; gap: 10px; }
+  .tour-mascote img { width: 76px; height: 104px; border-radius: 16px; box-shadow: 0 10px 24px rgba(8, 40, 90, .3), 0 0 0 3px #fff; }
+  .tour-fala { padding: 12px 14px; max-height: calc(100vh - 170px); overflow: auto; }
+  .tour-fala::before { bottom: 24px; left: -9px; width: 18px; height: 18px; }
+  .tour h2 { font-size: 1.12rem; }
+  .tour-texto { font-size: .88rem; }
+}
+@media (prefers-reduced-motion: reduce) { .tour-mascote, .tour-mascote img, .tour-fala, .tour-alvo { animation: none; } }
+
+/* legenda dos números da tela de Unidades */
+.legenda-numeros { display: grid; gap: 10px; margin-bottom: 16px; }
+.legenda-numeros div { display: grid; gap: 2px; }
+.legenda-numeros dt { font-weight: 800; color: var(--marinho); }
+.legenda-numeros dd { margin: 0; color: var(--suave); font-size: .92rem; }
+@media (min-width: 861px) { .legenda-numeros { grid-template-columns: repeat(3, 1fr); gap: 18px; } }

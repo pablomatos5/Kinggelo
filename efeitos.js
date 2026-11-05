@@ -93,8 +93,70 @@
     });
   }
 
-  // formulário de revenda: monta a mensagem e abre o WhatsApp do King Gelo
+  // ---------- unidade mais perto: os botões de WhatsApp perguntam antes de abrir ----------
+  // (sem JS, ou em navegador sem <dialog>, o link segue direto para a matriz em Cametá)
+  const UNIDADES = { cameta: '5591993561705', tucurui: '5594984385947' };
+  const lerUnidade = () => { try { return localStorage.getItem('kg_unidade'); } catch { return null; } };
+  const gravarUnidade = (u) => { try { localStorage.setItem('kg_unidade', u); } catch {} };
+  const linkZap = (unidade, texto) => `https://wa.me/${UNIDADES[unidade]}${texto ? '?text=' + encodeURIComponent(texto) : ''}`;
+  // conta o contato para a unidade no painel do dono (nada pessoal: só a unidade, de onde veio e o sabor)
+  const registrarContato = (unidade, origem, detalhe = '') => {
+    fetch('/api/publico/contato', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+      body: JSON.stringify({ unidade, origem, detalhe }),
+    }).catch(() => {});
+  };
+
+  const janela = document.getElementById('escolha-unidade');
+  let escolhendo = null; // o botão que abriu a janela: { origem, detalhe }
+  if (janela && typeof janela.showModal === 'function') {
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a[data-origem]');
+      // Ctrl/meio do mouse: abre direto, como um link comum
+      if (!a || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      const texto = new URL(a.href).searchParams.get('text') || '';
+      escolhendo = { origem: a.dataset.origem, detalhe: a.dataset.detalhe || '' };
+      const ultima = lerUnidade();
+      janela.querySelectorAll('.escolha').forEach((op) => {
+        op.href = linkZap(op.dataset.unidade, texto);
+        op.classList.toggle('ultima', op.dataset.unidade === ultima);
+      });
+      janela.showModal();
+      (janela.querySelector('.escolha.ultima') || janela.querySelector('.escolha')).focus();
+    });
+    janela.addEventListener('click', (e) => {
+      const op = e.target.closest('.escolha');
+      if (op) {
+        gravarUnidade(op.dataset.unidade);
+        registrarContato(op.dataset.unidade, escolhendo?.origem || 'contato', escolhendo?.detalhe);
+        setTimeout(() => janela.close(), 0); // o link abre o WhatsApp normalmente
+        return;
+      }
+      // toque no fundo escuro, fora da caixa, fecha
+      const r = janela.getBoundingClientRect();
+      if (e.target === janela && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) janela.close();
+    });
+  }
+  // número direto (cartões das unidades, contato, rodapé) ou link aberto sem a janela: conta para a unidade do número
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="https://wa.me/"]');
+    if (!a || e.defaultPrevented || a.closest('#escolha-unidade')) return;
+    const num = a.getAttribute('href').slice(14).split(/[?/]/)[0];
+    const unidade = Object.keys(UNIDADES).find((k) => UNIDADES[k] === num);
+    if (unidade) registrarContato(unidade, a.dataset.origem || 'contato', a.dataset.detalhe);
+  });
+
+  // formulário de revenda: monta a mensagem e abre o WhatsApp da unidade escolhida
   const form = document.getElementById('form-revenda');
+  const formUnidade = document.getElementById('form-unidade');
+  if (formUnidade && UNIDADES[lerUnidade()]) formUnidade.value = lerUnidade();
+  // a cidade digitada já sugere a unidade
+  form?.elements.cidade?.addEventListener('change', (e) => {
+    const c = e.target.value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (/tucurui/.test(c)) formUnidade.value = 'tucurui';
+    else if (/cameta|baiao|mocajuba|limoeiro|curucambaba|umarizal|porto grande|carapajo|bom jardim/.test(c)) formUnidade.value = 'cameta';
+  });
   const abertoEm = Date.now();
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -114,7 +176,9 @@
       // quanto tempo a página ficou aberta: robô envia em menos de 2 segundos
       body: JSON.stringify({ ...Object.fromEntries(d), tempo: Date.now() - abertoEm }),
     }).catch(() => {});
-    window.open('https://wa.me/5591993561705?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+    const unidade = UNIDADES[d.get('unidade')] ? d.get('unidade') : 'cameta';
+    gravarUnidade(unidade);
+    window.open(linkZap(unidade, msg), '_blank', 'noopener');
   });
 
   // decodifica todas as imagens com antecedência para não engasgar quando aparecerem

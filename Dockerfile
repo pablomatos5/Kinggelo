@@ -2,7 +2,10 @@
 FROM node:22-alpine
 ENV NODE_ENV=production PORT=8090 KG_BANCO=/dados/kinggelo.db
 WORKDIR /app
-COPY index.html style.css hero.js liquido.js efeitos.js robots.txt ./
+COPY index.html 404.html style.css hero.js gelo3d.js liquido.js efeitos.js robots.txt sitemap.xml ./
+# gelo3d.js importa a biblioteca 3D daqui; sem ela o bloco de gelo cai na versao simples em SVG
+COPY vendor ./vendor
+COPY fontes ./fontes
 COPY img ./img
 COPY painel/package.json painel/*.js ./painel/
 COPY painel/public ./painel/public

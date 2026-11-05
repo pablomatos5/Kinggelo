@@ -18,6 +18,18 @@ npm run exemplo            # opcional, SÓ para testar: apaga tudo e carrega dad
 Variáveis: `PORT` (padrão 8090), `KG_BANCO` (caminho do arquivo do banco; padrão `painel/dados/kinggelo.db`),
 `KG_HTTPS=1` quando estiver atrás do nginx com certificado (cookie de sessão fica `Secure`).
 
+## O que o painel faz
+- **Pedidos**: novo pedido, correção de sabores e quantidades depois de salvo (o estoque é acertado sozinho), dia de entrega
+  marcado e a lista "Para entregar" por dia e cidade (com impressão).
+- **Pagamentos em partes**: cada pedido guarda os pagamentos (valor, forma, dia). Fica "Parcial" até a soma chegar ao total.
+- **Produtos**: além dos 8 sabores, dá para cadastrar outros (ex.: gelo comum), editar nome, cor e preços e tirar de linha.
+- **Financeiro**: despesas por tipo, vendido × recebido × despesas e o lucro do mês, com os últimos 6 meses.
+- **Acessos**: o dono cria logins. `equipe` lança pedidos, entregas e estoque, mas o servidor não manda nenhum valor em
+  dinheiro para ela e barra financeiro, downloads, acessos e ajustes.
+- **Interessado novo**: o painel aberto confere a cada minuto e avisa (aviso na tela e, se permitido, notificação do aparelho).
+- **Backup automático**: uma cópia por dia em `dados/backups` (no servidor: `/dados/backups`), guardando 14 dias; dá para
+  baixar em Ajustes. Uma cópia fora do servidor, de vez em quando, continua sendo do dono.
+
 ## Como funcionam os avisos de reposição
 
 Para cada cliente ativo, o painel olha os pedidos confirmados/entregues:

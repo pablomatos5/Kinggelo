@@ -2,3 +2,12 @@ painel/dados
 **/*.db*
 deploy
 .git
+# imagens que o site nao usa (originais e versoes antigas): ficam no repositorio, nao vao para o servidor
+img/cliente/.originais
+img/*.jpg
+img/mascote.mp4
+img/pacote-*.webp
+img/logo-king-gelo.svg
+img/cliente/arte-lua.webp
+img/cliente/mascote-laranja-logo.webp
+img/cliente/pacote-maracuja-flat.webp

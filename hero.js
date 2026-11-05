@@ -43,7 +43,7 @@
   const telaSaco = centro.querySelector('.pc-canvas');
   const cs = telaSaco.getContext('2d');
   const leque = [...hero.querySelectorAll('.leque')];
-  const geloCopo = $('gelo-copo'), geloRefracao = $('gelo-copo-refracao'), canudo = $('canudo');
+  const geloCopo = $('gelo-copo'), geloRefracao = $('gelo-copo-refracao');
   const clipAcima = $('clip-acima'), clipAbaixo = $('clip-abaixo');
   const liquido = $('liquido'), liquidoSombra = $('liquido-sombra'), liquidoFrente = $('liquido-frente');
   const superficie = $('superficie'), superficieBrilho = $('superficie-brilho'), borda = $('liquido-borda');
@@ -106,7 +106,7 @@
     // apertado, o topo cede um pouco para baixo
     const ox = W * 0.8, oy = Hs * (0.04 + 0.025 * sq * (1 - murcha));
     // a pressão pulsa, como mãos apertando em tempos
-    const pulso = reduzido ? 0 : Math.max(0, Math.sin(t * 0.009)) * 0.35 * pressao;
+    const pulso = reduzido ? 0 : Math.max(0, Math.sin(t * 0.0115)) * 0.35 * pressao;
     const pr = Math.min(1, pressao + pulso);
     const esticaY = 1 + 0.03 * pr - 0.02 * murcha;
     const corpoH = Hs * CORTE * esticaY;
@@ -297,7 +297,8 @@
     // parado (só as bolhas e a boia mexendo): ~20 quadros por segundo bastam; o copo tem desfoques e
     // muitas gotas, e redesenhar tudo a 60 quadros pesava no celular
     const chave = `${kk.toFixed(4)}|${trajeto.gy.toFixed(2)}|${trajeto.rc.top.toFixed(0)}|${copoVisivel}`;
-    if (chave === chaveCopo && t - ultimoCopo < 50) return;
+    // parado: as bolhas e o balanco do gelo no copo a ~15 quadros por segundo bastam (sao lentos)
+    if (chave === chaveCopo && t - ultimoCopo < (estaOcioso ? 66 : 50)) return;
     chaveCopo = chave; ultimoCopo = t;
     const y = trajeto.gy;
     // depois do mergulho o bloco afunda um pouco e volta a boiar
@@ -308,6 +309,10 @@
     geloCopo.setAttribute('transform', `translate(${FUNDO.x} ${gy})`);
     // abaixo da superfície o bloco aparece deslocado e um pouco maior (refração do drink)
     geloRefracao.setAttribute('transform', `translate(${FUNDO.x + 5} ${gy + 3}) scale(1.04 1.02)`);
+    const impacto = clamp((kk - 0.45) / 0.3);
+    const nivel = lerp(612, 478, suave(0.45, 0.78, kk));
+    const onda = (reduzido ? 0 : 1) * Math.sin(impacto * Math.PI) * 5 + (reduzido ? 0 : Math.sin(t * 0.004) * 0.8);
+    const mw = meiaLargura(nivel);
     if (window.__gelo3d && window.__gelo3d.copo) {
       // entra em pé como terminou a queda, balança no mergulho e depois gira devagar boiando no drink
       const solto = reduzido ? 0 : suave(0.5, 0.9, kk);
@@ -322,17 +327,13 @@
       const gingado = dive ? Math.sin(dive * Math.PI * 2.5) * 0.2 * (1 - dive) : 0;
       const inclina = dive ? Math.sin(dive * Math.PI) * 0.22 : 0;
       window.__gelo3d.copo({
-        x: FUNDO.x, gy, nivel: lerp(612, 478, suave(0.45, 0.78, kk)), oculto: copoVisivel === false,
+        x: FUNDO.x, gy, nivel: nivel + onda * 0.4, mw, rySup: mw * 0.135 + onda, oculto: copoVisivel === false,
         ry: solto * Math.sin(t * 0.00045) * 0.55 + Math.atan(px / zCam),
         rx: 0.12 * solto + Math.sin(t * 0.0011) * 0.04 * solto + Math.atan(py / zCam) + inclina,
         rz: balanco + gingado + Math.sin(t * 0.0009) * 0.035 * solto,
       });
     }
 
-    const impacto = clamp((kk - 0.45) / 0.3);
-    const nivel = lerp(612, 478, suave(0.45, 0.78, kk));
-    const onda = (reduzido ? 0 : 1) * Math.sin(impacto * Math.PI) * 5 + (reduzido ? 0 : Math.sin(t * 0.004) * 0.8);
-    const mw = meiaLargura(nivel);
     [liquido, liquidoSombra].forEach((el) => { el.setAttribute('y', nivel); el.setAttribute('height', 800 - nivel); });
     clipAcima.setAttribute('height', Math.max(0, nivel));
     clipAbaixo.setAttribute('y', nivel); clipAbaixo.setAttribute('height', 900 - nivel);
@@ -357,8 +358,6 @@
       b.c.setAttribute('cx', b.x + Math.sin(ciclo * 12) * 3);
       b.c.setAttribute('cy', lerp(745, nivel + 8, ciclo));
     });
-    canudo.setAttribute('transform', `translate(0 ${(1 - suave(0.72, 0.9, kk)) * -560}) rotate(10 332 510)`);
-    canudo.style.opacity = suave(0.72, 0.76, kk);
   }
 
   // ---------- medidas de layout em cache (nada de medir o layout depois de escrever estilos) ----------
@@ -374,7 +373,7 @@
   // ---------- laço principal ----------
   let suaveY = scrollY, ultimo = performance.now(), ultimoScroll = scrollY, velocidade = 0;
   let inicioSeq = null;
-  const DUR_SEQ = 2300, FIM_SEQ = 0.74;
+  const DUR_SEQ = 1700, FIM_SEQ = 0.74;  // espremer → estufar → soltar, em 1,7 s
   let pAnterior = 0, kkAnterior = 0, ultimoTremor = null, ultimaAbertura = null, copoVisivel = null, telaLimpa = false;
   window.__gelo = { visivel: false };
 
@@ -447,7 +446,19 @@
     }
   }
 
+  let ultimaPosicao = -1, ultimaRolagem = 0, ultimoOcioso = 0, estaOcioso = false;
   function quadro(t) {
+    // parado (ninguem rolando, nenhuma gota no ar, sequencia do saquinho ja terminada): o que ainda se mexe
+    // (o gelo balancando, as bolhas do copo) fica bom a ~25 quadros por segundo. A 60 o celular esquentava
+    // com a pagina parada (30-40% de um nucleo so redesenhando).
+    if (scrollY !== ultimaPosicao) { ultimaPosicao = scrollY; ultimaRolagem = t; }
+    // (a nevoa fria que sai do gelo nao conta: ela e lenta e fica boa a 25 quadros)
+    const ocioso = !girando && particulas.every((q) => q.tipo === 'vapor') && t - ultimaRolagem > 500 && inicioSeq !== null && t > inicioSeq + DUR_SEQ + 400;
+    // espera com setTimeout (e nao pulando quadros com requestAnimationFrame): qualquer laco de rAF ativo faz o
+    // navegador produzir 60 quadros por segundo, e as animacoes de CSS da pagina sao recalculadas em todos
+    if (ocioso && t - ultimoOcioso < 38) { setTimeout(() => requestAnimationFrame(quadro), 40 - (t - ultimoOcioso)); return; }
+    ultimoOcioso = t;
+    estaOcioso = ocioso;
     // leitura do layout primeiro, antes de qualquer escrita de estilo neste quadro
     const r = centro.getBoundingClientRect();
     const dt = Math.min(0.033, Math.max(0.001, (t - ultimo) / 1000));
@@ -475,7 +486,9 @@
     // a sequência espremer → abrir → soltar roda sozinha logo que a página abre (não depende de rolar);
     // ao fim o bloco fica pendurado na boca do saquinho, e a rolagem só faz ele terminar de sair e cair
     // espera a foto do saquinho (ou no máximo 2,5s, para não travar se a imagem demorar)
-    if (inicioSeq === null && ((foto.complete && foto.naturalWidth) || t > 2500)) inicioSeq = t + 700;
+    // espera tambem o gelo 3D ficar pronto e pre-aquecido (ou desistir), para o bloco nao trocar de versao no meio da queda
+    const pronto3d = window.__gelo3d || window.__gelo3dTentou || t > 8000;
+    if (inicioSeq === null && pronto3d && ((foto.complete && foto.naturalWidth) || t > 2500)) inicioSeq = t + 700;
     // durante a troca de sabor a sequência volta ao início: o gelo do sabor anterior some junto com o saquinho
     const p = girando ? 0 : reduzido ? FIM_SEQ : inicioSeq === null ? 0 : clamp((t - inicioSeq) / DUR_SEQ) * FIM_SEQ;
     const aperto = suave(0.06, 0.5, p);
@@ -605,6 +618,8 @@
   let girando = false, arrastou = -1e9;
   const anguloDe = (el) => (el === centro ? 0 : (parseFloat(el.style.getPropertyValue('--a')) || 0) * (parseFloat(el.style.getPropertyValue('--abre')) || 1));
   const srcDe = (el) => (el === centro ? foto.src : el.src);
+  // os saquinhos do leque tem uma versao de 400 px para o celular (srcset): ao trocar de lugar, troca o par inteiro
+  const trocarImg = (el, src) => { el.src = src; el.srcset = `${src.replace(/\.webp$/, '-400.webp')} 400w, ${src} 600w`; };
   function estadoDa(el) {
     const r = el.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: el.offsetWidth, h: el.offsetHeight, a: anguloDe(el) };
@@ -702,7 +717,7 @@
         centro.dataset.sabor = depois[i];
         centro.setAttribute('aria-label', `Saquinho King Gelo sabor ${sb.nome} sendo espremido`);
       } else {
-        el.src = srcDepois[i];
+        trocarImg(el, srcDepois[i]);
         el.dataset.sabor = depois[i];
         el.alt = `Saquinho King Gelo sabor ${sb.nome}`;
         el.setAttribute('aria-label', `Girar até o sabor ${sb.nome}`);
@@ -834,4 +849,15 @@
   new ResizeObserver(() => { medirSaco(); chaveSaco = ''; }).observe(centro);
   foto.decode?.().catch(() => {});
   requestAnimationFrame(quadro);
+
+  // o gelo 3D (biblioteca de 690 KB e o preparo da luz, que trava o processador por quase 1 s no celular)
+  // so comeca depois que o saquinho do topo carregou: o logo e o saquinho aparecem antes
+  let pediu3d = false;
+  const carregar3d = () => {
+    if (pediu3d) return; pediu3d = true;
+    import('./gelo3d.js').catch(() => {}).finally(() => { window.__gelo3dTentou = true; });
+  };
+  const depois = () => ('requestIdleCallback' in window ? requestIdleCallback(carregar3d, { timeout: 600 }) : setTimeout(carregar3d, 100));
+  if (foto.complete) depois(); else { foto.addEventListener('load', depois, { once: true }); foto.addEventListener('error', depois, { once: true }); }
+  setTimeout(carregar3d, 2500);  // rede muito lenta: nao espera a foto para sempre
 })();

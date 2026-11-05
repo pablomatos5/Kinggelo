@@ -1,4 +1,5 @@
 # Uso na VPS (separado do Nexos): só entra na rede do nginx compartilhado para ser encaminhado.
+name: kinggelo
 services:
   app:
     build: ..
